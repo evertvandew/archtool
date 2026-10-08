@@ -1,0 +1,3 @@
+# Diagrams rendered from the PlantUML definitions in the documents
+*.png
+*.svg
