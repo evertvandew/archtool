@@ -5,6 +5,9 @@ description = "Tools to build, check and render architecture models stored as te
 requires-python = ">=3.12"
 dependencies = []
 
+[project.scripts]
+archtool = "archtool.cli:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
