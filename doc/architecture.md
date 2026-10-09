@@ -306,18 +306,20 @@ The texts shown for each element, and where they are placed, are defined by labe
 
 ### Layout engine
 
-Block and breakdown diagrams are laid out with the Eclipse Layout Kernel (ELK), which is well suited to nested blocks with ports on their borders.
+Block, breakdown and use-case diagrams are laid out with the Eclipse Layout Kernel (ELK), which is well suited to nested blocks with ports on their borders. Sequence diagrams are laid out by the tool itself.
 ELK is used through [elk-cli](https://github.com/kieler/elk-cli) (`@kieler/elk-cli` on npm), a command-line wrapper around elkjs:
 
-1. The diagram generator converts the diagram into an ELK JSON graph: blocks become nodes (nested for hierarchy), ports become ELK ports, and relationships become edges. Layout hints and layout options are passed along.
-2. It runs `elk`, passing the graph on stdin, and reads the laid-out graph, with coordinates, from stdout.
-3. It renders the SVG itself from the laid-out graph, applying the styling from the diagram file. The basic SVG output of elk-cli is not used.
+1. The diagram generator converts the diagram into an ELK JSON graph: blocks become nodes (nested for hierarchy), ports become ELK ports, and relationships become edges. The labels of lines and ports are passed along with their sizes, so that ELK makes room for them and places them; the generator places the labels of blocks itself.
+2. It runs `elk`, passing the graph in a temporary file (elk-cli cannot read a graph from stdin), and reads the laid-out graph, with coordinates, from stdout.
+3. It renders the SVG itself from the laid-out graph, with the labels, shapes and styles from the meta model and the diagram file. The basic SVG output of elk-cli is not used.
+
+The command is set by `render.elk` in `archtool.toml`. If it is the default `elk`, and `elk` is not installed but `npx` is, elk-cli is run with `npx -y @kieler/elk-cli`.
 
 Consequences:
 
 * Node.js is a runtime dependency of the diagram generator. The model library and the other tools do not need it.
 * Starting `elk` costs some time per call. This is acceptable for CI and for the MVP collaboration server. If it becomes a bottleneck, the server can keep a long-running elkjs process instead.
-* How manual layout hints are fed to ELK (e.g. fixed positions, or ELK's interactive layout options) is to be worked out in the detailed design.
+* Of the manual layout hints, sizes are passed to ELK. Positions are not applied yet; how to feed them to ELK (e.g. fixed positions, or ELK's interactive layout options) is still to be worked out.
 * For the Rust port, Rust reimplementations of ELK exist (e.g. [elkrs](https://crates.io/crates/elkrs)). If one proves mature enough, the Node.js dependency can be dropped.
 
 ## Core-model stereotypes

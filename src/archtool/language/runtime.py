@@ -95,6 +95,14 @@ class Runner:
         text = self._plain.message(labels[0].message, Env({}, identifier)) if labels else ""
         return text if text.strip() else identifier
 
+    def label_texts(self, identifier: str, diagram_type: str | None) -> list[tuple[str, str | None]]:
+        """The texts and anchors of the labels of an element in a diagram type. Elements inside a label are shown
+        by their identifiers."""
+        return [
+            (self._plain.message(label.message, Env({}, identifier)), label.anchor)
+            for label in self.labels(identifier, diagram_type)
+        ]
+
     def labels(self, identifier: str, diagram_type: str | None) -> list[ResolvedLabel]:
         """The labels of an element in a diagram type (None: the default labels), from the most specific type or
         stereotype that has any."""
