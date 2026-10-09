@@ -5,8 +5,8 @@ An example meta model, based on a small subset of the [Arcadia](https://mbse-cap
 It serves as:
 
 * an example of a meta model, for users writing their own;
-* the running example of the [selection language](../../selection_language.md) and the [architecture](../../architecture.md);
-* a starting point for the conformance test suite, as it uses every part of the [file formats](../../file_formats.md).
+* the running example of the [selection language](../../doc/selection_language.md) and the [architecture](../../doc/architecture.md);
+* a starting point for the conformance test suite, as it uses every part of the [file formats](../../doc/file_formats.md).
 
 ## The meta model
 
