@@ -1,0 +1,5 @@
+@last_number 3
+id:id;parent:ref(function);child:ref(function);name:str
+function_contains_function_1;system_function_1;system_function_2;
+function_contains_function_2;system_function_1;system_function_3;
+function_contains_function_3;system_function_1;system_function_4;

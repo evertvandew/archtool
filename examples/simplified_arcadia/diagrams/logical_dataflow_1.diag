@@ -1,0 +1,3 @@
+@diagram logical_dataflow_1 : logical_dataflow
+generate logical_dataflow
+@end

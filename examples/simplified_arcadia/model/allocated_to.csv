@@ -1,0 +1,6 @@
+@last_number 4
+id:id;start:ref(logical_function);end:ref(component);name:str
+allocated_to_1;logical_function_1;component_2;
+allocated_to_2;logical_function_2;component_2;
+allocated_to_3;logical_function_3;component_3;
+allocated_to_4;logical_function_4;component_4;

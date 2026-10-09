@@ -1,0 +1,4 @@
+@last_number 2
+id:id;start:ref(component_port);end:ref(component_port);name:str;protocol:str
+component_exchange_1;component_port_1;component_port_2;Pump control;PWM
+component_exchange_2;component_port_3;component_port_4;Sensor signal;Analogue, 0-5 V

@@ -1,0 +1,6 @@
+@last_number 4
+id:id;name:str
+logical_function_1;Handle user input
+logical_function_2;Control heater
+logical_function_3;Measure temperature
+logical_function_4;Run pump

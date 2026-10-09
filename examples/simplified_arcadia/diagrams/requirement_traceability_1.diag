@@ -1,0 +1,3 @@
+@diagram requirement_traceability_1 : requirement_traceability
+generate traceability(root=requirement_1)
+@end

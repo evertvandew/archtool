@@ -412,7 +412,12 @@ package "Core model: stereotypes" as core {
     layout hints
   }
 
-  class BlockDiagram <<stereotype>>
+  class BlockDiagram <<stereotype>> {
+    .. meta model ..
+    {field} chains: list(Chain type)
+    .. concrete model ..
+    {field} highlights: list(ref(Chain))
+  }
   class BreakDownDiagram <<stereotype>>
   class UseCaseDiagram <<stereotype>>
 
@@ -617,6 +622,6 @@ Note how the *restricts* properties in the meta model become the types of the re
 * Editing engine, as CLI and as service.
 * Diagram generator for block and breakdown diagrams, with SVG output for CI.
 * Collaboration server with the hierarchy view and the diagram editor.
-* One example meta model, a simplified Arcadia.
+* One example meta model, a simplified Arcadia, in [`examples/simplified_arcadia`](examples/simplified_arcadia).
 
 Later: sequence and use-case diagrams, duplicate merger, changing an element's type, templates and instantiations, the query tool, further example meta models.

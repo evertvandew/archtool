@@ -1,0 +1,204 @@
+# Simplified Arcadia meta model
+#
+# A small subset of the Arcadia method, as used in Capella:
+# - system analysis: actors, system functions and requirements;
+# - logical architecture: logical functions, realising system functions,
+#   exchanging data through functional exchanges;
+# - physical architecture: components, to which logical functions are
+#   allocated, connected by component exchanges;
+# - verification: tests covering requirements.
+
+@table entity_types
+name:ident;extends:ref(entity_types);description:text
+actor;;An external entity that interacts with the system.
+requirement;;A requirement on the system.
+test;;A test that verifies requirements.
+function;;A function performed by the system.
+system_function;function;A function of the system as a whole, as seen from outside.
+logical_function;function;A function of the logical architecture, realising a system function.
+component;;A part of the system.
+
+@table port_types
+name:ident;extends:ref(port_types);owner:list(ref(entity_types));description:text
+function_port;;[function];A port through which a function exchanges data.
+component_port;;[component,actor];A port through which a component or actor communicates.
+
+@table relationship_types
+name:ident;extends:ref(relationship_types);start:list(ref(entity_types|port_types));end:list(ref(entity_types|port_types));description:text
+functional_exchange;;[function_port];[function_port];Data passed from one function to another.
+component_exchange;;[component_port];[component_port];A physical connection between components.
+allocated_to;;[logical_function];[component];The component that performs a logical function.
+involves;;[actor];[system_function];An actor taking part in a system function.
+satisfies;;[system_function];[requirement];A system function satisfying a requirement.
+covers;;[test];[requirement];A test verifying a requirement.
+
+@table refinement_types
+name:ident;extends:ref(refinement_types);start:list(ref(entity_types));end:list(ref(entity_types));description:text
+realises;;[logical_function];[system_function];A logical function realising a system function.
+
+@table hierarchy_types
+name:ident;parent:ref(entity_types);child:ref(entity_types);description:text
+function_contains_function;function;function;The breakdown of a function into sub-functions.
+component_contains_component;component;component;The breakdown of a component into sub-components.
+
+@table relationship_breakdown_types
+name:ident;aggregate:ref(relationship_types);constituent:ref(relationship_types);description:text
+exchange_allocation;component_exchange;functional_exchange;A functional exchange carried by a component exchange.
+
+@table chain_types
+name:ident;relationship:ref(relationship_types);description:text
+functional_chain;functional_exchange;A sequence of functional exchanges, e.g. a scenario.
+
+@table diagram_types
+name:ident;kind:enum(block|sequence|breakdown|use_case);entities:list(ref(entity_types|port_types));relationships:list(ref(any_type));chains:list(ref(chain_types));rules:list(ident);description:text
+mission;use_case;[actor,system_function];[involves];;[mission];The actors and the system functions they take part in.
+function_breakdown;breakdown;[function];[function_contains_function];;[function_breakdown];The breakdown of a function into sub-functions.
+requirement_traceability;block;[requirement,test,system_function];[satisfies,covers];;[traceability];The functions and tests related to a requirement.
+logical_dataflow;block;[logical_function,function_port];[functional_exchange];[functional_chain];[logical_dataflow];The leaf logical functions and the data they exchange.
+functional_sequence;sequence;[logical_function];[functional_exchange];[functional_chain];;A scenario of functional exchanges between logical functions.
+physical_architecture;block;[component,component_port];[component_exchange,component_contains_component];;[component_internals];The components of the system and their connections.
+allocation;block;[component,logical_function];[allocated_to,component_contains_component];;[allocation];The logical functions allocated to components.
+
+@table abstraction_levels
+name:ident;diagrams:list(ref(diagram_types));description:text
+system_level;[mission,function_breakdown,requirement_traceability];What the system must do, as seen from outside.
+logical_level;[logical_dataflow,functional_sequence];How the system works, independent of its implementation.
+physical_level;[physical_architecture,allocation];How the system is built.
+
+@table attributes
+type:ref(any_type);name:ident;datatype:datatype;required:bool;default:str;description:text
+Entity;name;str;false;;The name of the element.
+requirement;text;text;true;;The text of the requirement.
+requirement;priority;enum(high|medium|low);true;;
+requirement;verification_method;enum(test|inspection|analysis|demonstration);true;;How the requirement is verified.
+test;procedure;text;false;;The steps of the test.
+function_port;direction;enum(input|output);true;;
+functional_exchange;description;text;false;;
+component_exchange;protocol;str;false;;The protocol or signal type used.
+
+@table labels
+diagram_type:ref(diagram_types);type:ref(any_type);text:str;anchor:ident
+;Entity;{name};
+mission;actor;{name};bottom
+physical_architecture;component;{name};top
+physical_architecture;component;«component»;top_left
+allocation;component;{name};top
+requirement_traceability;requirement;{name};top
+requirement_traceability;requirement;{text};centre
+
+@table shapes
+diagram_type:ref(diagram_types);type:ref(any_type);shape:str;start:str;end:str
+;Entity;rectangle;;
+;Relationship;;none;arrow
+;function;rounded_rectangle;;
+;actor;actor;;
+;requirement;note;;
+;test;document;;
+mission;system_function;use_case;;
+;involves;;none;none
+;allocated_to;;none;open_arrow
+;satisfies;;none;open_arrow
+;covers;;none;open_arrow
+;Relationship_breakdown;;none;none
+function_breakdown;function_contains_function;;none;none
+
+@rules
+# Generation rules
+
+diagram mission:
+    show actor
+    show actor.targets(involves)
+    show involves
+
+diagram function_breakdown(root: function, depth: int = 3):
+    show root
+    show root.descendants(depth)
+
+diagram traceability(root: requirement):
+    show root
+    show root.sources(satisfies)
+    show root.sources(covers)
+    show satisfies to root
+    show covers to root
+
+diagram logical_dataflow:
+    let functions = logical_function where children is empty
+    show functions
+    show functional_exchange between functions
+
+diagram component_internals(root: component, depth: int = 1):
+    let blocks = root.descendants(depth)
+    show root
+    show blocks
+    show component_exchange between blocks
+
+diagram allocation(root: component):
+    let blocks = root union root.descendants
+    let functions = blocks.sources(allocated_to)
+    show blocks
+    show functions
+    show allocated_to between (blocks union functions)
+
+# Verification rules
+
+check requirement_covered (error):
+    for each r in requirement where verification_method = test:
+        require r.sources(covers) is not empty
+        otherwise "Requirement {r} is verified by test, but is not covered by any test."
+
+check requirement_satisfied (warning):
+    for each r in requirement where verification_method != inspection:
+        require r.sources(satisfies) is not empty
+        otherwise "Requirement {r} is not satisfied by any system function."
+
+check system_function_realised (warning):
+    for each f in system_function where children is empty:
+        require f.sources(realises) is not empty
+        otherwise "Leaf system function {f} is not realised by any logical function."
+
+check logical_function_allocated (warning):
+    for each f in logical_function where children is empty:
+        require count(f.targets(allocated_to)) = 1
+        otherwise "Leaf logical function {f} must be allocated to exactly one component."
+
+check port_direction (error):
+    for each e in functional_exchange:
+        require e.start.direction = output and e.end.direction = input
+        otherwise "Functional exchange {e} must go from an output port to an input port."
+
+# Queries
+
+query unallocated_functions:
+    select logical_function where children is empty and targets(allocated_to) is empty
+    columns id, name
+
+query untested_high_priority_requirements:
+    select requirement where priority = high and sources(covers) is empty
+    columns id, name, verification_method
+@end
+
+@defs
+<linearGradient id="component_fill" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#ffffff"/>
+  <stop offset="1" stop-color="#a6d5ee"/>
+</linearGradient>
+<linearGradient id="function_fill" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#ffffff"/>
+  <stop offset="1" stop-color="#c5e6a6"/>
+</linearGradient>
+@end
+
+@style
+.Entity > .label { font-family: sans-serif; font-size: 12px; }
+.component > .shape { fill: url(#component_fill); stroke: #4a7ea4; }
+.function > .shape { fill: url(#function_fill); stroke: #3f8a3f; }
+.requirement > .shape { fill: #fff8c4; stroke: #b39b2e; }
+.test > .shape { fill: #f0f0f0; stroke: #666666; }
+.Relationship > .line { stroke: #333333; stroke-width: 1px; fill: none; }
+.functional_exchange > .line { stroke: #2e8b57; stroke-width: 2px; }
+.component_exchange > .line { stroke: #4a7ea4; stroke-width: 2px; }
+.allocated_to > .line, .satisfies > .line, .covers > .line { stroke-dasharray: 4 3; }
+.Relationship_breakdown > .line { stroke: #888888; stroke-dasharray: 2 2; }
+.highlighted > .line { stroke: #d2691e; stroke-width: 3px; }
+.highlighted > .shape { stroke: #d2691e; stroke-width: 2px; }
+@end

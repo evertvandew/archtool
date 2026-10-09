@@ -1,0 +1,8 @@
+@last_number 6
+id:id;owner:ref(function);name:str;direction:enum(input|output)
+function_port_1;logical_function_1;Start command;output
+function_port_2;logical_function_4;Start command;input
+function_port_3;logical_function_3;Temperature;output
+function_port_4;logical_function_2;Temperature;input
+function_port_5;logical_function_2;Ready;output
+function_port_6;logical_function_4;Ready;input

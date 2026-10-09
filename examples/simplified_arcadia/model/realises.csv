@@ -1,0 +1,6 @@
+@last_number 4
+id:id;start:ref(logical_function);end:ref(system_function);name:str
+realises_1;logical_function_1;system_function_2;
+realises_2;logical_function_2;system_function_3;
+realises_3;logical_function_3;system_function_3;
+realises_4;logical_function_4;system_function_4;

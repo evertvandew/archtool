@@ -1,0 +1,3 @@
+@diagram function_breakdown_1 : function_breakdown
+generate function_breakdown(root=system_function_1, depth=2)
+@end

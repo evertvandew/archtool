@@ -1,0 +1,6 @@
+@last_number 4
+id:id;name:str
+system_function_1;Make coffee
+system_function_2;Select drink
+system_function_3;Heat water
+system_function_4;Brew

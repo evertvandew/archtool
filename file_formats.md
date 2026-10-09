@@ -162,6 +162,8 @@ A list is written as `[`, the elements separated by `,`, and `]`, without spaces
 Each element is written as a value of the list's element type, with `,` additionally escaped as `\,`.
 An empty list is written as an empty cell.
 
+Readers are lenient about spaces in lists whose elements are identifiers, names or references (`id`, `ident`, `enum(…)` and `ref(…)` elements): spaces after `[`, before and after `,`, and before `]` are ignored, so `[component, actor]` reads as `[component,actor]`. In lists of other types, such as `str`, spaces are part of the elements. Writers never write these spaces.
+
 ```
 [function_3,function_7]
 [Alpha\, Beta,Gamma]
@@ -245,6 +247,7 @@ number     = [1-9][0-9]* ;
 * The type is everything before the last underscore.
 * Numbers start at 1, have no leading zeros, and are never reused within a type.
 * Because identifiers are split at the last underscore, type names must not end in an underscore followed by digits (`level_2` is not a valid type name).
+* **Order:** identifiers are sorted by type name (in Unicode code point order), and within a type by number. So `function_9` comes before `function_10`, and `functional_exchange_2` before `logical_function_1`.
 
 ## Core columns
 
@@ -333,7 +336,7 @@ check requirement_covered (error):
 | `chain_types` | `Chain` | `name:ident;relationship:ref(relationship_types);description:text` |
 | `template_types` | `TemplateEntity` | `name:ident;extends:ref(template_types);description:text` |
 | `instantiation_types` | `InstantiationEntity` | `name:ident;template:ref(template_types);description:text` |
-| `diagram_types` | `Diagram` | `name:ident;kind:enum(block\|sequence\|breakdown\|use_case);entities:list(ref(entity_types\|port_types));relationships:list(ref(any_type));chain:ref(chain_types);rules:list(ident);description:text` |
+| `diagram_types` | `Diagram` | `name:ident;kind:enum(block\|sequence\|breakdown\|use_case);entities:list(ref(entity_types\|port_types));relationships:list(ref(any_type));chains:list(ref(chain_types));rules:list(ident);description:text` |
 | `abstraction_levels` | `Abstraction_level` | `name:ident;diagrams:list(ref(diagram_types));description:text` |
 | `attributes` | | `type:ref(any_type);name:ident;datatype:datatype;required:bool;default:str;description:text` |
 | `labels` | | `diagram_type:ref(diagram_types);type:ref(any_type);text:str;anchor:ident` |
@@ -341,7 +344,7 @@ check requirement_covered (error):
 
 * `extends` is optional; a type extends at most one other type of the same table.
 * Each template type has exactly one instantiation type: `instantiation_types.template` refers to it, and no two instantiation types refer to the same template type.
-* In `diagram_types`, `kind` selects the core diagram stereotype. `chain` is only allowed for sequence diagrams, and is optional. `relationships` may list relationship, refinement, hierarchy and relationship breakdown types. `rules` lists the generation rules that diagrams of this type may use.
+* In `diagram_types`, `kind` selects the core diagram stereotype. `chains` lists, for a block diagram type, the chain types whose chains its diagrams can highlight, and for a sequence diagram type at most one chain type, whose chains its diagrams can show. It is not allowed for other kinds. `relationships` may list relationship, refinement, hierarchy and relationship breakdown types. `rules` lists the generation rules that diagrams of this type may use.
 
 ### Attributes
 
@@ -368,7 +371,12 @@ The `labels` table defines the texts shown for an element, and where they are pl
 
 Diagrams are rendered as SVG, and styled with CSS.
 
-* Each rendered element carries CSS classes: its type, the types it extends, and its stereotype, e.g. `class="system_function function Entity"`. The SVG of a diagram carries its diagram type as a class.
+* Each rendered element is an SVG group (`<g>`) that carries CSS classes: its type, the types it extends, and its stereotype, e.g. `class="system_function function Entity"`. The SVG of a diagram carries its diagram type as a class.
+* Within an element's group, the stylesheet can address the parts of the element by class:
+  * `shape`: the outline of a block or port;
+  * `line`: the line of a relationship;
+  * `label`: a text, which additionally carries the class of its anchor, e.g. `label top_left`.
+* A highlighted chain adds the class `highlighted` to the groups of its relationships and of the elements they connect.
 * The `@style` section contains a stylesheet, which applies to all diagrams. It is copied into the SVG unchanged, so any CSS that SVG supports can be used.
 * The `@defs` section contains SVG definitions, such as gradients and markers, which the stylesheet can refer to. It is copied into the `<defs>` of the SVG unchanged.
 
@@ -381,9 +389,9 @@ Diagrams are rendered as SVG, and styled with CSS.
 @end
 
 @style
-.physical_architecture .component > rect { fill: url(#component_fill); stroke: #4a7ea4; }
-.Relationship path { stroke: #333333; }
-.functional_exchange path { stroke: #2e8b57; stroke-width: 2px; }
+.physical_architecture .component > .shape { fill: url(#component_fill); stroke: #4a7ea4; }
+.Relationship > .line { stroke: #333333; }
+.functional_exchange > .line { stroke: #2e8b57; stroke-width: 2px; }
 @end
 ```
 
@@ -432,7 +440,7 @@ Each statement is one line. Readers ignore blank lines. There are no comments: d
 
 ### Generated diagrams
 
-A generated diagram has a single `generate` statement, which calls a generation rule with its arguments, in the syntax of the selection language:
+A generated diagram has a single `generate` statement, which calls a generation rule with its arguments, in the syntax of the selection language. Arguments with a default value may be omitted; a rule without parameters is called by its name alone, e.g. `generate mission`.
 
 ```
 @diagram physical_architecture_4 : physical_architecture

@@ -1,0 +1,6 @@
+@last_number 4
+id:id;owner:ref(component|actor);name:str
+component_port_1;component_2;Pump control
+component_port_2;component_4;Pump control
+component_port_3;component_3;Sensor
+component_port_4;component_2;Sensor

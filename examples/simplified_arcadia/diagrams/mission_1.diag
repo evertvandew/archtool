@@ -1,0 +1,3 @@
+@diagram mission_1 : mission
+generate mission
+@end

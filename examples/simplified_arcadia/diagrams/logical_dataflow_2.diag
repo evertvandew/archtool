@@ -1,0 +1,10 @@
+@diagram logical_dataflow_2 : logical_dataflow
+show functional_exchange_2
+show functional_exchange_3
+show logical_function_2
+show logical_function_3
+show logical_function_4
+highlight functional_chain_1
+layout logical_function_3 at 40,40
+style logical_function_2 stroke-width: 3px
+@end

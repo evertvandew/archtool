@@ -1,0 +1,4 @@
+@last_number 2
+id:id;name:str;procedure:text
+test_1;Brew a cup;1. Fill the water tank.\n2. Select coffee.\n3. Check that a cup of coffee is delivered.
+test_2;Time a brew;1. Select coffee.\n2. Measure the time until the cup is full.

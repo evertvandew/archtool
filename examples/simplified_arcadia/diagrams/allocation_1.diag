@@ -1,0 +1,3 @@
+@diagram allocation_1 : allocation
+generate allocation(root=component_1)
+@end

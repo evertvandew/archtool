@@ -1,0 +1,9 @@
+@diagram functional_sequence_1 : functional_sequence
+participant logical_function_1
+participant logical_function_3
+participant logical_function_2
+participant logical_function_4
+message functional_exchange_1
+message functional_exchange_2
+message functional_exchange_3
+@end

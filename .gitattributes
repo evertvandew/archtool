@@ -1,0 +1,2 @@
+*.csv  text eol=lf
+*.diag text eol=lf

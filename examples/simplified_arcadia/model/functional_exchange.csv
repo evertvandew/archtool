@@ -1,0 +1,5 @@
+@last_number 3
+id:id;start:ref(function_port);end:ref(function_port);name:str;description:text
+functional_exchange_1;function_port_1;function_port_2;Start brewing;The user has selected a drink.
+functional_exchange_2;function_port_3;function_port_4;Water temperature;Measured every 100 ms.
+functional_exchange_3;function_port_5;function_port_6;Water ready;The water has reached brewing temperature.
