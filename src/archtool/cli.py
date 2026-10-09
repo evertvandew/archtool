@@ -9,6 +9,7 @@ from typing import TextIO
 
 from archtool.checker import Finding, Severity, check_repository
 from archtool.errors import FormatError
+from archtool.language.runtime import RuleError, Runner, load_rules
 from archtool.repository import load_repository
 
 
@@ -18,13 +19,24 @@ def main(argv: Sequence[str] | None = None) -> int:
     check = commands.add_parser(
         "check",
         help="check a model against its meta model",
-        description="Check a model against its meta model. Writes the findings as JSON lines, and exits with "
-        "status 1 if any finding is an error.",
+        description="Check a model against its meta model, and evaluate its verification rules. Writes the findings "
+        "as JSON lines, and exits with status 1 if any finding is an error.",
     )
     check.add_argument("repository", nargs="?", type=Path, default=Path("."), help="the model repository (default: .)")
+    query = commands.add_parser(
+        "query",
+        help="run a query, or evaluate an expression",
+        description="Run a query of the meta model, or evaluate an expression in the selection language. Writes the "
+        "results as JSON lines.",
+    )
+    query.add_argument("query", help="the name of a query, or an expression")
+    query.add_argument("arguments", nargs="*", metavar="name=value", help="arguments of the query")
+    query.add_argument("-r", "--repository", type=Path, default=Path("."), help="the model repository (default: .)")
     arguments = parser.parse_args(argv)
     if arguments.command == "check":
         return run_check(arguments.repository, sys.stdout)
+    if arguments.command == "query":
+        return run_query(arguments.repository, arguments.query, arguments.arguments, sys.stdout, sys.stderr)
     raise AssertionError(f"unknown command {arguments.command}")
 
 
@@ -33,10 +45,44 @@ def run_check(root: Path, output: TextIO) -> int:
     try:
         findings = check_repository(load_repository(root))
     except FormatError as error:
-        findings = [Finding(Severity.ERROR, "syntax", error.message, None, _relative(error.path, root), error.line, error.column)]
+        findings = [Finding(Severity.ERROR, "syntax", error.message, None, error.path, error.line, error.column)]
     for finding in findings:
-        output.write(json.dumps(finding.to_json(), ensure_ascii=False) + "\n")
+        record = finding.to_json()
+        if "path" in record:
+            record["path"] = _relative(str(record["path"]), root)
+        output.write(json.dumps(record, ensure_ascii=False) + "\n")
     return 1 if any(finding.severity is Severity.ERROR for finding in findings) else 0
+
+
+def run_query(root: Path, text: str, arguments: Sequence[str], output: TextIO, errors: TextIO) -> int:
+    """Run a query or evaluate an expression, and write the results to `output`. Returns the exit status."""
+    try:
+        repository = load_repository(root)
+        rules = load_rules(repository.metamodel)
+        runner = Runner(rules, repository.model)
+        if text in rules.program.queries:
+            pairs = tuple(_argument(argument) for argument in arguments)
+            result = runner.query(text, pairs)
+        else:
+            if arguments:
+                raise RuleError("arguments can only be given to queries")
+            result = runner.expression(text)
+    except FormatError as error:
+        errors.write(f"{_relative(error.path, root)}:{error.line}:{error.column}: {error.message}\n")
+        return 1
+    except RuleError as error:
+        errors.write(f"{error}\n")
+        return 1
+    for record in result.records():
+        output.write(json.dumps(record, ensure_ascii=False) + "\n")
+    return 0
+
+
+def _argument(text: str) -> tuple[str, str]:
+    name, equals, value = text.partition("=")
+    if not equals:
+        raise RuleError(f"argument '{text}' must be written as name=value")
+    return name, value
 
 
 def _relative(path: str, root: Path) -> str:
@@ -44,4 +90,3 @@ def _relative(path: str, root: Path) -> str:
         return Path(path).resolve().relative_to(root.resolve()).as_posix()
     except ValueError:
         return path
-

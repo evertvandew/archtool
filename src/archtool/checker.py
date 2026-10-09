@@ -1,7 +1,7 @@
 """The model checker: checks a concrete model against its meta model, and reports all findings.
 
 Syntax errors are found while loading a repository; this module checks what can only be checked once the
-whole model is loaded. Verification rules, which need the selection language, are not evaluated yet.
+whole model is loaded, and evaluates the verification rules of the meta model.
 See "Model checker" in doc/architecture.md.
 """
 
@@ -26,6 +26,7 @@ from archtool.formats.diagram_file import (
 from archtool.formats.escaping import escape
 from archtool.formats.values import Argument, Parameter, parse_scalar
 from archtool.identifiers import identifier_key
+from archtool.language.runtime import Runner, load_rules
 from archtool.metamodel import MetaModel, Stereotype
 from archtool.model import Element, Model
 from archtool.repository import DIAGRAM_DIRECTORY, MODEL_DIRECTORY, Repository
@@ -64,6 +65,7 @@ def check_repository(repository: Repository) -> list[Finding]:
         *checker.check_elements(),
         *checker.check_hierarchy(),
         *checker.check_diagrams(),
+        *checker.check_rules(),
     ]
     return sorted(findings, key=lambda f: (f.path or "", identifier_key(f.element) if f.element else ("", 0)))
 
@@ -82,6 +84,16 @@ class _Checker:
 
     def error(self, element: Element, check: str, message: str, *, path: str | None = None) -> Finding:
         return Finding(Severity.ERROR, check, message, element.id, path or self.path(element))
+
+    # --- Verification rules ------------------------------------------------------------------------------
+
+    def check_rules(self) -> Iterator[Finding]:
+        rules = load_rules(self.metamodel)
+        for error in rules.errors:
+            yield Finding(Severity.ERROR, "rules", error.message, None, error.path, error.line, error.column)
+        for result in Runner(rules, self.model).checks():
+            element = self.model.get(result.element)
+            yield Finding(Severity(result.severity), result.rule, result.message, element.id, self.path(element))
 
     # --- Elements ------------------------------------------------------------------------------------------
 

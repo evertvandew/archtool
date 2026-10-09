@@ -342,17 +342,27 @@ Combining set operations, `between`, `from` or `to` with `where` requires parent
 | `x in s` | every element of `x` is in set `s` |
 | `x is empty`, `x is not empty` | the set is empty; for an attribute: no value is set |
 | `x contains "text"` | the text contains the given text (case-insensitive) |
-| `x matches "regex"` | the text matches a regular expression |
+| `x matches "regex"` | the text contains a match of a regular expression; use `^` and `$` to match the whole text |
 | `count(s) >= 2` | the number of elements in a set |
 | `every y in s: cond`, `some y in s: cond`, `no y in s: cond` | quantifiers |
 | `cond and cond`, `cond or cond`, `not cond` | combinations |
 
 Comparing with an attribute that has no value is always false, except for `is empty`.
 
-### Names inside `where`
+Navigating from a set of elements to an attribute gives the values of all of them. A comparison of values holds if any value on the left and any value on the right compare as required: `requirement.priority = high` holds if any requirement has a high priority. `x != y` is the opposite of `x = y`. Sets of elements are compared as sets: `a = b` holds if they contain the same elements.
 
-Inside `where`, a bare name first refers to an attribute or navigation of the element being tested.
-If a rule parameter or `let` has the same name, the meta-model checker reports the ambiguity as an error, and the user writes `this.name` to mean the element's attribute.
+### Names
+
+A bare name refers to, in this order:
+
+1. a rule parameter, or a `let`, `for each` or quantifier variable;
+2. inside `where`: an attribute or navigation of the element being tested;
+3. in a comparison with an enumeration: a value of that enumeration, so in `verification_method = test`, `test` is the enumeration value, even though `test` is also a type;
+4. a definition;
+5. a type or stereotype: all elements of that type;
+6. an element, by its identifier, e.g. `function_3`.
+
+Inside `where`, if a rule parameter or `let` has the same name as an attribute of the element, the meta-model checker reports the ambiguity as an error, and the user writes `this.name` to mean the element's attribute.
 
 ## Rules
 
@@ -542,8 +552,9 @@ These names can therefore not be used as type, attribute or relationship names i
 
 ## Implementation notes
 
-* The parser is generated with [TatSu](https://github.com/neogeny/TatSu), a PEG parser generator for Python, from a grammar file derived from the grammar above. The grammar file is the authoritative definition of the syntax. For the Rust port, it can be translated to a Rust PEG parser generator such as pest.
-* Python-like indentation needs attention: PEG grammars do not handle indentation-based blocks naturally. A small preprocessing step can turn changes in indentation into explicit block markers before parsing.
+* The grammar is written for [TatSu](https://github.com/neogeny/TatSu), a PEG parser generator for Python, in `src/archtool/language/grammar.py`. It is the authoritative definition of the syntax. For the Rust port, it can be translated to a Rust PEG parser generator such as pest.
+* The parser is generated from the grammar into `src/archtool/language/_parser.py`, as compiling the grammar at run time is several times slower. After changing the grammar, it is regenerated with `uv run python -m archtool.language.grammar`; a test checks that it is up to date.
+* PEG grammars do not handle indentation-based blocks naturally, so a preprocessing step turns indentation into explicit block markers before parsing. It keeps every line and column in place, so that error messages refer to the original text. A block opens after a line that ends with `:`; a line indented further without a preceding `:`, such as an `otherwise` on its own line, continues the previous line.
 * Error messages must give the line and column, and be phrased in terms of the language rather than the grammar.
 * Rules are processed in three steps: parsing into a syntax tree, type checking against the meta model, and evaluation against the model store.
 * Evaluation uses the indexes of the model store (by type, by identifier, and reverse references), so that navigation such as `.sources(covers)` does not scan the whole model.

@@ -3,7 +3,9 @@ name = "archtool"
 version = "0.1.0"
 description = "Tools to build, check and render architecture models stored as text"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "tatsu>=5.24.0",
+]
 
 [project.scripts]
 archtool = "archtool.cli:main"
@@ -21,6 +23,14 @@ dev = [
 [tool.mypy]
 strict = true
 files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["tatsu", "tatsu.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["archtool.language._parser"]
+ignore_errors = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

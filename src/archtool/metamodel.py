@@ -163,6 +163,7 @@ class Label:
     type: str
     text: str
     anchor: str | None
+    line: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -172,6 +173,7 @@ class Shape:
     shape: str | None
     start: str | None
     end: str | None
+    line: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -409,7 +411,8 @@ class _Builder:
     def _label(self, row: Row) -> Label:
         diagram_type, type_name = self._presentation_keys(row)
         anchor = row.values.get("anchor")
-        return Label(diagram_type, type_name, _text(row.values.get("text")), anchor if isinstance(anchor, str) else None)
+        text = _text(row.values.get("text"))
+        return Label(diagram_type, type_name, text, anchor if isinstance(anchor, str) else None, row.line)
 
     def _shape(self, row: Row) -> Shape:
         diagram_type, type_name = self._presentation_keys(row)
@@ -419,6 +422,7 @@ class _Builder:
             _optional_text(row.values.get("shape")),
             _optional_text(row.values.get("start")),
             _optional_text(row.values.get("end")),
+            row.line,
         )
 
     def _presentation_keys(self, row: Row) -> tuple[str | None, str]:
