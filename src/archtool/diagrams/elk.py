@@ -24,7 +24,7 @@ from archtool.diagrams.geometry import (
     PlacedLabel,
     text_size,
 )
-from archtool.diagrams.hints import apply_position_hints
+from archtool.diagrams.hints import apply_position_hints, fit
 from archtool.diagrams.presentation import Presentation
 from archtool.formats.diagram_file import Layout
 from archtool.metamodel import Stereotype
@@ -55,7 +55,8 @@ def elk_layout(
     geometry = read_layout(run_elk(graph, command))
     if any(hint.element in content.blocks for hint in hints.values()):
         geometry = apply_position_hints(geometry, content, hints, orthogonal=content.stereotype is Stereotype.BLOCK_DIAGRAM)
-    return geometry
+    # ELK's tree layout can report a graph narrower than its nodes when it places several trees side by side.
+    return fit(geometry)
 
 
 def elk_graph(content: DiagramContent, presentation: Presentation, hints: Mapping[str, Layout]) -> _Json:
@@ -74,7 +75,8 @@ def elk_graph(content: DiagramContent, presentation: Presentation, hints: Mappin
     if content.stereotype is Stereotype.BLOCK_DIAGRAM:
         options["elk.hierarchyHandling"] = "INCLUDE_CHILDREN"
     elif content.stereotype is Stereotype.BREAKDOWN_DIAGRAM:
-        options |= {"elk.algorithm": "mrtree", "elk.direction": "DOWN"}
+        # A breakdown of several elements is a forest: its trees are placed side by side, rather than packed in rows.
+        options |= {"elk.algorithm": "mrtree", "elk.direction": "DOWN", "elk.aspectRatio": "100"}
         del options["elk.edgeRouting"]
 
     def node(block: str) -> _Json:

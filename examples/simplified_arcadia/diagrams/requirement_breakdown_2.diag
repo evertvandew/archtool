@@ -1,0 +1,3 @@
+@diagram requirement_breakdown_2 : requirement_breakdown
+generate all_requirements
+@end

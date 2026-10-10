@@ -54,7 +54,7 @@ functional_chain;functional_exchange;A sequence of functional exchanges, e.g. a 
 name:ident;kind:enum(block|sequence|breakdown|use_case);entities:list(ref(entity_types|port_types));relationships:list(ref(any_type));chains:list(ref(chain_types));rules:list(ident);description:text
 mission;use_case;[actor,system_function];[involves];;[mission];The actors and the system functions they take part in.
 function_breakdown;breakdown;[function];[function_contains_function];;[function_breakdown];The breakdown of a function into sub-functions.
-requirement_breakdown;breakdown;[requirement];[requirement_contains_requirement];;[requirement_breakdown];The breakdown of a requirement into more detailed requirements.
+requirement_breakdown;breakdown;[requirement];[requirement_contains_requirement];;[requirement_breakdown,all_requirements];The breakdown of a requirement into more detailed requirements, or of all requirements.
 requirement_traceability;block;[requirement,test,system_function];[satisfies,covers];;[traceability];The functions and tests related to a requirement.
 logical_dataflow;block;[logical_function,function_port];[functional_exchange];[functional_chain];[logical_dataflow];The leaf logical functions and the data they exchange.
 functional_sequence;sequence;[logical_function];[functional_exchange];[functional_chain];;A scenario of functional exchanges between logical functions.
@@ -120,6 +120,9 @@ diagram function_breakdown(root: function, depth: int = 3):
 diagram requirement_breakdown(root: requirement, depth: int = 3):
     show root
     show root.descendants(depth)
+
+diagram all_requirements:
+    show requirement
 
 diagram traceability(root: requirement):
     show root

@@ -111,7 +111,7 @@ def apply_position_hints(geometry: Geometry, content: DiagramContent, hints: Map
         paths,
         labels,
     )
-    return _fit(result)
+    return fit(result)
 
 
 def _tree_order(content: DiagramContent) -> list[str]:
@@ -184,7 +184,7 @@ def _vertical_side(box: Box, boxes: Mapping[str, Box], owners: Mapping[str, str]
     return box.x + box.width > owner.x + 1 and box.x < owner.x + owner.width - 1
 
 
-def _fit(geometry: Geometry) -> Geometry:
+def fit(geometry: Geometry) -> Geometry:
     """Make the diagram as large as its contents, and move them into view if a hint placed them at negative
     coordinates."""
     xs = [b.x for b in geometry.boxes] + [x for p in geometry.paths for x, _ in p.points]

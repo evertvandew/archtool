@@ -8,7 +8,7 @@ import pytest
 
 from archtool.cli import run_render
 from archtool.diagrams.content import DiagramContent, Line, SequenceEvent, diagram_content
-from archtool.diagrams.elk import elk_command, elk_graph, read_layout
+from archtool.diagrams.elk import elk_command, elk_graph, elk_layout, read_layout
 from archtool.diagrams.geometry import Box, Geometry, Path as GeometryPath, PlacedLabel
 from archtool.diagrams.hints import apply_position_hints
 from archtool.diagrams.presentation import Presentation
@@ -339,3 +339,15 @@ def test_preview_of_generated_diagram(repository: Repository, elk: list[str]) ->
         renderer.preview("requirement_breakdown", "requirement_breakdown", (("root", "requirement_9"),))
     with pytest.raises(RenderError, match="needs a value for parameter 'root'"):
         renderer.preview("requirement_breakdown", "requirement_breakdown", ())
+
+
+def test_breakdown_of_several_trees(runner: Runner, elk: list[str]) -> None:
+    # All requirements: "Brew coffee" with its parts, and two requirements that are not broken down.
+    diagram = runner.model.diagrams["requirement_breakdown_2"]
+    geometry = elk_layout(content(runner, diagram.id), Presentation(runner, diagram.type), {}, elk)
+    blocks = boxes(geometry)
+    assert set(blocks) == {f"requirement_{n}" for n in range(1, 6)}
+    # The trees are placed side by side: their roots are in one row.
+    assert blocks["requirement_1"][1] == blocks["requirement_2"][1] == blocks["requirement_3"][1]
+    # The diagram is as large as its contents, although ELK reports a smaller graph for a forest.
+    assert all(x + w <= geometry.width and y + h <= geometry.height for x, y, w, h in blocks.values())

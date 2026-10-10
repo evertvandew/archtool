@@ -29,7 +29,7 @@ def example(tmp_path: Path) -> Path:
 def test_load_example() -> None:
     repository = load_repository(SIMPLIFIED_ARCADIA)
     model = repository.model
-    assert len(model) == 74
+    assert len(model) == 75
     assert model.get("requirement_1").values["priority"] == "high"
     assert [e.id for e in model.elements_of("function")] == [
         "logical_function_1", "logical_function_2", "logical_function_3", "logical_function_4",
