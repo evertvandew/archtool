@@ -1,4 +1,4 @@
 @diagram physical_architecture_1 : physical_architecture
 generate component_internals(root=component_1, depth=1)
-layout component_2 at 40,60 size 160x100
+layout component_2 at 330,110 size 160x100
 @end

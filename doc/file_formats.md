@@ -492,7 +492,8 @@ style <id> <CSS declarations>
 ```
 
 * Coordinates and sizes are integers, in pixels.
-* `layout` fixes the position (and optionally size) of a block. All other blocks are laid out automatically.
+* `layout` fixes the position (and optionally size) of a block. The position is relative to the top-left corner of the enclosing block, or of the diagram for a block that is not inside another one; a block's contents move along with it. All other blocks are laid out automatically. Enclosing blocks grow where needed to contain a block placed by a hint, and lines attached to it are rerouted.
+* Sequence diagrams have no `layout` statements: their layout follows from the order of participants and messages.
 * `style` overrides the style of one element in this diagram, with literal CSS declarations that are applied to the element's SVG, e.g. `style component_5 fill: url(#highlight_fill); stroke-dasharray: 4 2`. Styles that apply to all elements of a type belong in the `@style` section of the meta model instead.
 
 ### Canonical order

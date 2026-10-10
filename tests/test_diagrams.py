@@ -10,6 +10,7 @@ from archtool.cli import run_render
 from archtool.diagrams.content import DiagramContent, Line, SequenceEvent, diagram_content
 from archtool.diagrams.elk import elk_command, elk_graph, read_layout
 from archtool.diagrams.geometry import Box, Geometry, Path as GeometryPath, PlacedLabel
+from archtool.diagrams.hints import apply_position_hints
 from archtool.diagrams.presentation import Presentation
 from archtool.diagrams.render import RenderError, Renderer
 from archtool.diagrams.sequence import sequence_layout
@@ -253,3 +254,76 @@ def test_cli_render(elk: list[str], tmp_path: Path) -> None:
     assert (tmp_path / "mission_1.svg").exists()
     assert run_render(SIMPLIFIED_ARCADIA, ["mission_7"], tmp_path, output, errors) == 1
     assert "there is no diagram 'mission_7'" in errors.getvalue()
+
+
+# --- Position hints -----------------------------------------------------------------------------------------
+
+
+def hinted_layout() -> tuple[DiagramContent, Geometry]:
+    """A container `c_1` with blocks `a_1` (with port `p_1`) and `b_1` (with port `p_2`), and a line between the ports."""
+    content = DiagramContent("d_1", "d", Stereotype.BLOCK_DIAGRAM, blocks=["a_1", "b_1", "c_1"],
+                             parents={"a_1": "c_1", "b_1": "c_1"}, ports={"a_1": ["p_1"], "b_1": ["p_2"]},
+                             lines=[Line("e_1", "p_1", "p_2")])  # fmt: skip
+    geometry = Geometry(
+        400, 200,
+        boxes=[Box("c_1", "block", 10, 10, 380, 120, container=True), Box("a_1", "block", 30, 50, 100, 50),
+               Box("p_1", "port", 130, 70, 10, 10), Box("b_1", "block", 250, 50, 100, 50), Box("p_2", "port", 240, 70, 10, 10)],
+        paths=[GeometryPath("e_1", "line", ((140, 75), (240, 75)))],
+        labels=[PlacedLabel("e_1", "E", 180, 60), PlacedLabel("p_1", "P", 142, 80)],
+    )  # fmt: skip
+    return content, geometry
+
+
+def boxes(geometry: Geometry) -> dict[str, tuple[float, float, float, float]]:
+    return {b.element: (b.x, b.y, b.width, b.height) for b in geometry.boxes}
+
+
+def test_position_hint_moves_block_with_its_ports() -> None:
+    content, geometry = hinted_layout()
+    result = apply_position_hints(geometry, content, {"a_1": Layout("a_1", 20, 100)}, orthogonal=True)
+    # Relative to the enclosing block, at (10, 10).
+    assert boxes(result)["a_1"] == (30, 110, 100, 50)
+    assert boxes(result)["p_1"] == (130, 130, 10, 10)
+    # The enclosing block grows to contain it, and the line is rerouted orthogonally from port to port.
+    assert boxes(result)["c_1"] == (10, 10, 380, 162)
+    assert result.paths == [GeometryPath("e_1", "line", ((140, 135), (190, 135), (190, 75), (240, 75)))]
+    # The line's label is now placed by the renderer; the port's label moves with its port.
+    assert result.labels == [PlacedLabel("p_1", "P", 142, 140)]
+    assert result.height >= 172
+
+
+def test_position_hint_moves_contents_along() -> None:
+    content, geometry = hinted_layout()
+    result = apply_position_hints(geometry, content, {"c_1": Layout("c_1", 50, 30)}, orthogonal=False)
+    assert boxes(result)["c_1"] == (50, 30, 380, 120)
+    assert boxes(result)["a_1"] == (70, 70, 100, 50)
+    assert boxes(result)["p_2"] == (280, 90, 10, 10)
+    assert result.paths == [GeometryPath("e_1", "line", ((180, 95), (280, 95)))]
+    assert result.width == 442
+
+
+def test_ports_follow_the_edge_of_a_growing_block() -> None:
+    content, geometry = hinted_layout()
+    content.ports["c_1"] = ["p_3"]
+    geometry.boxes.append(Box("p_3", "port", 390, 60, 10, 10))  # On the right edge of c_1.
+    result = apply_position_hints(geometry, content, {"b_1": Layout("b_1", 400, 50)}, orthogonal=True)
+    c = boxes(result)["c_1"]
+    assert boxes(result)["p_3"][0] == c[0] + c[2]
+
+
+def test_rendered_position_hint(repository: Repository, elk: list[str]) -> None:
+    svg = Renderer(repository, elk).render("physical_architecture_1")
+    root = ElementTree.fromstring(svg)
+    rects = {g.get("data-id"): g.find(f"{SVG}rect") for g in root.iter(f"{SVG}g") if g.get("data-id")}
+    machine, controller = rects["component_1"], rects["component_2"]
+    assert machine is not None and controller is not None
+    # `layout component_2 at 330,110 size 160x100`
+    assert float(controller.get("x", 0)) - float(machine.get("x", 0)) == 330
+    assert float(controller.get("y", 0)) - float(machine.get("y", 0)) == 110
+    assert (controller.get("width"), controller.get("height")) == ("160", "100")
+
+
+def test_negative_positions_are_moved_into_view() -> None:
+    content, geometry = hinted_layout()
+    result = apply_position_hints(geometry, content, {"c_1": Layout("c_1", -30, 0)}, orthogonal=True)
+    assert boxes(result)["c_1"][0] == 12

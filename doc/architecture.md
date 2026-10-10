@@ -362,7 +362,7 @@ Consequences:
 
 * Node.js is a runtime dependency of the diagram generator. The model library and the other tools do not need it.
 * Starting `elk` costs some time per call. This is acceptable for CI and for the MVP collaboration server. If it becomes a bottleneck, the server can keep a long-running elkjs process instead.
-* Of the manual layout hints, sizes are passed to ELK. Positions are not applied yet; how to feed them to ELK (e.g. fixed positions, or ELK's interactive layout options) is still to be worked out.
+* Size hints are passed to ELK. ELK cannot fix the position of some blocks while laying out the others, so position hints are applied after ELK's layout: hinted blocks are moved with their contents and ports, enclosing blocks grow to contain them, and the lines attached to anything that moved are rerouted (orthogonally in block diagrams, straight in others). Everything else keeps ELK's layout.
 * For the Rust port, Rust reimplementations of ELK exist (e.g. [elkrs](https://crates.io/crates/elkrs)). If one proves mature enough, the Node.js dependency can be dropped.
 
 ## Core-model stereotypes

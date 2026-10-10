@@ -24,6 +24,7 @@ from archtool.diagrams.geometry import (
     PlacedLabel,
     text_size,
 )
+from archtool.diagrams.hints import apply_position_hints
 from archtool.diagrams.presentation import Presentation
 from archtool.formats.diagram_file import Layout
 from archtool.metamodel import Stereotype
@@ -51,7 +52,10 @@ def elk_layout(
     content: DiagramContent, presentation: Presentation, hints: Mapping[str, Layout], command: list[str]
 ) -> Geometry:
     graph = elk_graph(content, presentation, hints)
-    return read_layout(run_elk(graph, command))
+    geometry = read_layout(run_elk(graph, command))
+    if any(hint.element in content.blocks for hint in hints.values()):
+        geometry = apply_position_hints(geometry, content, hints, orthogonal=content.stereotype is Stereotype.BLOCK_DIAGRAM)
+    return geometry
 
 
 def elk_graph(content: DiagramContent, presentation: Presentation, hints: Mapping[str, Layout]) -> _Json:
