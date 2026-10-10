@@ -28,7 +28,7 @@ In this document, a *type* always means a meta-model element, and an *element* a
 ## Technology
 
 * **CLI tools, model library and collaboration server:** Python for the MVP. When the design crystallises and stable binary distributions are wanted, they are ported to Rust.
-* **Web clients:** free choice; TypeScript is a likely candidate, but C#, Brython, Rust or plain JavaScript are equally acceptable. The web clients talk to the server through a language-neutral protocol (JSON over WebSocket), so their technology does not affect the rest of the system.
+* **Web clients:** free choice; for the MVP, plain JavaScript without a build step. The web clients talk to the server through a language-neutral protocol (JSON over WebSocket), so their technology does not affect the rest of the system.
 
 All tools are subcommands of a single executable, `archtool`, e.g. `archtool check`, `archtool edit`, `archtool render` and `archtool serve`.
 There is one thing to install, while each subcommand still performs a single task.
@@ -314,6 +314,27 @@ One server per model. It:
 
 Commands are executed in order of arrival; when two users edit the same element at the same moment, the last write wins.
 There are no user accounts or access control.
+
+It is started with `archtool serve [repository]`, on the host and port of `archtool.toml` unless `--host` and `--port` are given.
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /` | The web client. |
+| `GET /api/model` | A snapshot of the model as JSON: the types of the meta model (with their columns and properties), the elements (with their values, default labels and hierarchy parents), the diagrams and the current findings. |
+| `GET /api/socket` | A WebSocket. Clients send `{"request": n, "command": "…"}` and receive `{"type": "result", "request": n, …}` with the result of the command. All clients receive `{"type": "changed", "version": v}` when the model changes, and then fetch the model again. |
+| `POST /api/commands` | Executes `{"command": "…"}`, for clients without a WebSocket. |
+| `GET /api/diagrams/<id>.svg` | A rendered diagram. Diagrams are rendered at most once per version of the model. |
+| `POST /api/identifiers` | Allocates an identifier: `{"type": "function"}` → `{"id": "function_43"}`. |
+
+The web client is plain JavaScript, without a framework or build step. Every change it makes is a command of the editing engine, so it goes through the same validation as `archtool edit`. It has:
+
+* a hierarchy view of the entities, with search, and forms to edit their attributes, add parts and ports, move them in the hierarchy, connect them with relationships, and delete them;
+* the diagrams: rendered by the server, with elements selectable by clicking them; drawn diagrams can show and hide elements, and sequence diagrams can add chains;
+* the current findings, which link to the elements they concern;
+* a console to type commands, which also logs the results of all commands of the client.
+
+The view is kept in the URL (e.g. `/#component_2`), so links to elements and diagrams can be shared.
+While a diagram is rendered, which runs elk-cli, other commands wait. If this becomes a bottleneck, the layout can be run outside the lock, or with a long-running elkjs process.
 
 ## Layout and rendering
 

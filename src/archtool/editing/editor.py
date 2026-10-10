@@ -82,6 +82,11 @@ class Editor:
         self.save = save
         self._findings = set(check_repository(repository, self.rules))
 
+    @property
+    def findings(self) -> list[Finding]:
+        """The current findings of the model."""
+        return sorted(self._findings, key=_finding_key)
+
     # --- Running commands ----------------------------------------------------------------------------------
 
     def run(self, text: str, line: int = 0) -> Result | None:

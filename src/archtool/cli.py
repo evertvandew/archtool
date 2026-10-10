@@ -14,6 +14,7 @@ from archtool.errors import FormatError
 from archtool.identifiers import identifier_key
 from archtool.language.runtime import RuleError, Runner, load_rules
 from archtool.repository import load_repository
+from archtool.server.app import serve
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -53,7 +54,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     edit.add_argument("file", nargs="?", default="-", help="the file with commands (default: stdin)")
     edit.add_argument("-r", "--repository", type=Path, default=Path("."), help="the model repository (default: .)")
+    serve = commands.add_parser(
+        "serve",
+        help="share a model with web clients",
+        description="Start the collaboration server for a model, with its web client. The host and port default to "
+        "the settings in archtool.toml.",
+    )
+    serve.add_argument("repository", nargs="?", type=Path, default=Path("."), help="the model repository (default: .)")
+    serve.add_argument("--host", help="the address to listen on")
+    serve.add_argument("--port", type=int, help="the port to listen on")
     arguments = parser.parse_args(argv)
+    if arguments.command == "serve":
+        return run_serve(arguments.repository, arguments.host, arguments.port, sys.stderr)
     if arguments.command == "edit":
         if arguments.file == "-":
             return run_edit(arguments.repository, sys.stdin, sys.stdout, sys.stderr)
@@ -154,6 +166,19 @@ def run_edit(root: Path, commands: TextIO, output: TextIO, errors: TextIO) -> in
         output.write(json.dumps(record, ensure_ascii=False) + "\n")
         output.flush()
     return status
+
+
+def run_serve(root: Path, host: str | None, port: int | None, errors: TextIO) -> int:
+    try:
+        repository = load_repository(root)
+    except FormatError as error:
+        errors.write(f"{_relative(error.path, root)}:{error.line}:{error.column}: {error.message}\n")
+        return 1
+    host = host or repository.settings.host
+    port = port or repository.settings.port
+    errors.write(f"Serving {root} on http://{host}:{port}/\n")
+    serve(repository, host, port)
+    return 0
 
 
 def _argument(text: str) -> tuple[str, str]:

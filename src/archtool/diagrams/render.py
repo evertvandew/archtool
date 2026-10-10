@@ -33,7 +33,6 @@ class Renderer:
         if self.rules.errors:
             error = self.rules.errors[0]
             raise RenderError(f"{error.path}:{error.line}:{error.column}: {error.message}")
-        self.runner = Runner(self.rules, repository.model)
         self.command = command if command is not None else elk_command(repository.settings.elk)
         metamodel = repository.metamodel
         self.defs = "".join(section.text for section in metamodel.defs)
@@ -45,13 +44,14 @@ class Renderer:
         if identifier not in model.diagrams:
             raise RenderError(f"there is no diagram '{identifier}'")
         diagram = model.diagrams[identifier]
+        runner = Runner(self.rules, model)  # Created for every rendering, as the model may have changed.
         try:
-            content = diagram_content(self.runner, diagram)
+            content = diagram_content(runner, diagram)
         except RuleError as error:
             raise RenderError(f"{identifier}: {error}") from None
-        presentation = Presentation(self.runner, diagram.type)
+        presentation = Presentation(runner, diagram.type)
         if content.stereotype is Stereotype.SEQUENCE_DIAGRAM:
-            geometry = sequence_layout(content, presentation, model, self.runner.evaluator)
+            geometry = sequence_layout(content, presentation, model, runner.evaluator)
         else:
             hints = {s.element: s for s in diagram.statements if isinstance(s, Layout)}
             try:

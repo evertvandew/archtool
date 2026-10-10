@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Architecting tool</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>Architecting tool</h1>
+    <span id="status" class="status">connecting…</span>
+  </header>
+  <main>
+    <nav id="sidebar">
+      <section>
+        <input id="search" type="search" placeholder="Search elements…" aria-label="Search elements">
+      </section>
+      <section>
+        <h2>Model</h2>
+        <form id="new-element" class="inline">
+          <select id="new-element-type" aria-label="Type of the new element"></select>
+          <input id="new-element-name" placeholder="Name" aria-label="Name of the new element">
+          <button type="submit">Add</button>
+        </form>
+        <div id="tree" class="tree"></div>
+      </section>
+      <section>
+        <h2>Diagrams</h2>
+        <ul id="diagrams" class="list"></ul>
+        <details>
+          <summary>New diagram</summary>
+          <form id="new-diagram" class="stacked">
+            <select id="new-diagram-type" aria-label="Type of the new diagram"></select>
+            <input id="new-diagram-name" placeholder="Name" aria-label="Name of the new diagram">
+            <input id="new-diagram-generate" placeholder="Generation rule, e.g. mission (optional)" aria-label="Generation rule">
+            <button type="submit">Add diagram</button>
+          </form>
+        </details>
+      </section>
+    </nav>
+    <section id="content">
+      <p class="hint">Select an element or a diagram.</p>
+    </section>
+    <aside id="side">
+      <section>
+        <h2>Findings <span id="findings-count" class="count"></span></h2>
+        <ul id="findings" class="list findings"></ul>
+      </section>
+      <section class="console">
+        <h2>Commands</h2>
+        <div id="log" class="log" aria-live="polite"></div>
+        <form id="console">
+          <input id="command" placeholder="e.g. add actor name=&quot;Barista&quot;" aria-label="Command" autocomplete="off">
+        </form>
+      </section>
+    </aside>
+  </main>
+  <script type="module" src="/static/app.js"></script>
+</body>
+</html>

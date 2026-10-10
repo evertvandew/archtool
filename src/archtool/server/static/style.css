@@ -1,0 +1,81 @@
+:root {
+  --border: #d0d7de;
+  --muted: #57606a;
+  --accent: #0969da;
+  --selected: #ddf4ff;
+  --error: #cf222e;
+  --warning: #9a6700;
+  --info: #57606a;
+  --ok: #1a7f37;
+  font-family: system-ui, sans-serif;
+  font-size: 14px;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; height: 100vh; display: flex; flex-direction: column; color: #1f2328; }
+header { display: flex; align-items: center; gap: 1rem; padding: 0.5rem 1rem; border-bottom: 1px solid var(--border); }
+header h1 { font-size: 1.1rem; margin: 0; }
+.status { color: var(--muted); font-size: 0.9rem; }
+.status.connected { color: var(--ok); }
+.status.disconnected { color: var(--error); }
+
+main { flex: 1; display: grid; grid-template-columns: 300px 1fr 340px; min-height: 0; }
+#sidebar, #side { overflow: auto; padding: 0.5rem; }
+#sidebar { border-right: 1px solid var(--border); }
+#side { border-left: 1px solid var(--border); display: flex; flex-direction: column; }
+#content { overflow: auto; padding: 1rem; }
+h2 { font-size: 0.8rem; text-transform: uppercase; color: var(--muted); margin: 1rem 0 0.4rem; }
+h3 { margin: 1.2rem 0 0.4rem; font-size: 1rem; }
+.hint, .muted { color: var(--muted); }
+.count { font-weight: normal; }
+
+input, select, textarea, button { font: inherit; padding: 0.25rem 0.4rem; border: 1px solid var(--border); border-radius: 4px; }
+button { background: #f6f8fa; cursor: pointer; }
+button:hover { background: #eef1f4; }
+button.danger { color: var(--error); }
+#search { width: 100%; }
+form.inline { display: flex; gap: 0.3rem; }
+form.inline select, form.inline input { min-width: 0; flex: 1; }
+form.stacked { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.4rem; }
+
+.tree ul, .list { list-style: none; margin: 0; padding: 0; }
+.tree ul ul { padding-left: 1rem; }
+.tree details > summary { cursor: pointer; color: var(--muted); font-size: 0.85rem; margin-top: 0.3rem; }
+.item { display: block; width: 100%; text-align: left; border: none; background: none; padding: 0.15rem 0.3rem; border-radius: 4px; }
+.item:hover { background: #f6f8fa; }
+.item.selected { background: var(--selected); }
+.item .type { color: var(--muted); font-size: 0.8rem; margin-left: 0.3rem; }
+
+.findings li { padding: 0.25rem 0.3rem; border-radius: 4px; cursor: pointer; }
+.findings li:hover { background: #f6f8fa; }
+.severity { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; margin-right: 0.3rem; }
+.severity.error { color: var(--error); }
+.severity.warning { color: var(--warning); }
+.severity.info { color: var(--info); }
+
+.title { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+.title h2 { font-size: 1.4rem; text-transform: none; color: inherit; margin: 0; }
+.id { font-family: ui-monospace, monospace; color: var(--muted); }
+.fields { display: grid; grid-template-columns: max-content 1fr; gap: 0.4rem 0.8rem; align-items: center; max-width: 720px; }
+.fields label { color: var(--muted); }
+.fields label.required::after { content: " *"; color: var(--error); }
+.fields textarea { min-height: 4rem; resize: vertical; }
+.actions { display: flex; gap: 0.4rem; margin-top: 0.8rem; flex-wrap: wrap; align-items: center; }
+.notice { background: #fff8c5; border: 1px solid #d4a72c; padding: 0.4rem 0.6rem; border-radius: 4px; margin-bottom: 0.8rem; }
+.links li { padding: 0.1rem 0; }
+.links a { color: var(--accent); cursor: pointer; text-decoration: none; }
+.links a:hover { text-decoration: underline; }
+
+/* Not called .diagram: that is the class of the rendered SVG itself. */
+.diagram-view { border: 1px solid var(--border); border-radius: 4px; overflow: auto; padding: 0.5rem; background: #fff; }
+.diagram-view svg { display: block; max-width: 100%; height: auto; }
+.diagram-view [data-id] { cursor: pointer; }
+.diagram-view .selected > .shape, .diagram-view .selected > .line { stroke: var(--accent) !important; stroke-width: 3px !important; }
+
+.console { margin-top: auto; }
+.log { font-family: ui-monospace, monospace; font-size: 0.8rem; max-height: 40vh; overflow: auto; border: 1px solid var(--border);
+       border-radius: 4px; padding: 0.3rem; margin-bottom: 0.3rem; background: #f6f8fa; }
+.log div { padding: 0.15rem 0; border-bottom: 1px solid #eaeef2; white-space: pre-wrap; }
+.log .ok { color: var(--ok); }
+.log .failed { color: var(--error); }
+#command { width: 100%; font-family: ui-monospace, monospace; }
