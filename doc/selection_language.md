@@ -483,8 +483,8 @@ archtool query "function_3.descendants(2)"
 archtool query unallocated_functions
 ```
 
-The same expressions are used in the search box of the web clients.
-Because the CLI reads commands from stdin, `archtool query` also works interactively, which makes it a convenient way to explore a model and to try out expressions before putting them in a rule.
+`archtool query` evaluates one expression or query per run, which makes it a convenient way to explore a model and to try out expressions before putting them in a rule.
+The search box of the web client does not use the selection language: it matches text in the identifiers and labels of elements.
 
 ## Static checking
 
