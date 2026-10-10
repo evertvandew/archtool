@@ -324,11 +324,13 @@ It is started with `archtool serve [repository]`, on the host and port of `archt
 | `GET /api/socket` | A WebSocket. Clients send `{"request": n, "command": "…"}` and receive `{"type": "result", "request": n, …}` with the result of the command. All clients receive `{"type": "changed", "version": v}` when the model changes, and then fetch the model again. |
 | `POST /api/commands` | Executes `{"command": "…"}`, for clients without a WebSocket. |
 | `GET /api/diagrams/<id>.svg` | A rendered diagram. Diagrams are rendered at most once per version of the model. |
+| `GET /api/preview.svg?type=<diagram type>&rule=<rule>&<parameter>=<value>…` | A generated diagram that is not stored in the model, e.g. the breakdown of an element. |
 | `POST /api/identifiers` | Allocates an identifier: `{"type": "function"}` → `{"id": "function_43"}`. |
 
 The web client is plain JavaScript, without a framework or build step. Every change it makes is a command of the editing engine, so it goes through the same validation as `archtool edit`. It has:
 
 * a hierarchy view of the entities, with search, and forms to edit their attributes, add parts and ports, move them in the hierarchy, connect them with relationships, and delete them;
+* for a selected element: the diagrams it appears in, and generated views of it that are not stored in the model, such as its breakdown. A view can be made with any diagram type whose generation rule has exactly one required parameter, of the element's type; an element that is broken down shows its breakdown straight away;
 * the diagrams: rendered by the server, with elements selectable by clicking them; drawn diagrams can show and hide elements, and sequence diagrams can add chains;
 * the current findings, which link to the elements they concern;
 * a console to type commands, which also logs the results of all commands of the client.

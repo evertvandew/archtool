@@ -250,8 +250,9 @@ function renderElement(content, id) {
   parts.push(attributeForm(id));
   if (isEntity(e.type)) parts.push(...hierarchySection(id), ...portsSection(id));
   if (isEntity(e.type) || hasStereotype(e.type, "Port")) parts.push(...relationshipsSection(id));
-  parts.push(...referencesSection(id), ...diagramsSection(id));
+  parts.push(...referencesSection(id), ...diagramsSection(id), ...viewsSection(id));
   content.replaceChildren(...parts);
+  showDefaultView(id);
 }
 
 function attributeForm(id) {
@@ -413,6 +414,74 @@ function diagramsSection(id) {
   if (!diagrams.length) return [];
   return [el("h3", {}, "Appears in"), el("ul", {className: "links"}, diagrams.map((d) => el("li", {},
     el("a", {onclick: () => openDiagram(d.id, id)}, d.label), " ", el("span", {className: "muted"}, d.type))))];
+}
+
+// The generated diagrams that can be made for an element without storing them: those of diagram types whose
+// generation rule has exactly one required parameter, of the element's type. E.g. the breakdown of a requirement.
+function viewOptions(id) {
+  const type = element(id).type;
+  const options = [];
+  for (const diagramType of Object.keys(types()).filter(isDiagramType)) {
+    for (const rule of property(diagramType, "rules")) {
+      const parameters = (state.model.rules[rule] || {parameters: []}).parameters;
+      const required = parameters.filter((p) => p.default === null);
+      if (required.length === 1 && isA(type, required[0].type)) {
+        options.push({diagramType, rule, parameter: required[0].name, kind: types()[diagramType].stereotype});
+      }
+    }
+  }
+  return options;
+}
+
+function viewsSection(id) {
+  const options = viewOptions(id);
+  if (!options.length) return [];
+  const viewSelect = el("select", {id: "view-select", "aria-label": "Generated view"},
+    options.map((o, index) => option(String(index), o.diagramType === o.rule ? o.diagramType : `${o.diagramType} (${o.rule})`)));
+  return [
+    el("h3", {}, "Generated views"),
+    el("form", {className: "actions", onsubmit: (event) => {
+        event.preventDefault();
+        showView(id, options[Number(viewSelect.value)]);
+      }}, viewSelect, el("button", {type: "submit"}, "Show")),
+    el("div", {id: "view", className: "diagram-view", hidden: true}),
+  ];
+}
+
+// Elements that are broken down show their breakdown straight away.
+function showDefaultView(id) {
+  const hasParts = Object.values(elements()).some((e) => e.parent === id);
+  const options = viewOptions(id);
+  const breakdown = options.findIndex((o) => o.kind === "BreakDownDiagram");
+  if (hasParts && breakdown >= 0) {
+    document.getElementById("view-select").value = String(breakdown);
+    showView(id, options[breakdown]);
+  }
+}
+
+async function showView(id, view) {
+  const container = document.getElementById("view");
+  if (!container) return;
+  container.hidden = false;
+  container.replaceChildren(el("p", {className: "muted"}, "Rendering…"));
+  const query = new URLSearchParams({type: view.diagramType, rule: view.rule, [view.parameter]: id,
+                                     version: String(state.model.version)});
+  const response = await fetch(`/api/preview.svg?${query}`);
+  if (!state.view || state.view.id !== id || !document.getElementById("view")) return;  // Another view was chosen.
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({error: response.statusText}));
+    container.replaceChildren(el("p", {className: "notice"}, `The view cannot be rendered: ${body.error}`));
+    return;
+  }
+  // The SVG comes from the server's renderer, which escapes all text in it.
+  container.innerHTML = await response.text();
+  for (const group of container.querySelectorAll("[data-id]")) {
+    group.classList.toggle("selected", group.dataset.id === id);
+    group.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (element(group.dataset.id)) select(group.dataset.id);
+    });
+  }
 }
 
 // Open a diagram, with an element selected in it.

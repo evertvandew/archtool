@@ -5,7 +5,8 @@ One server serves one model. It holds the model in memory, with the editing engi
 * serves the web client (`/`), and a snapshot of the model as JSON (`/api/model`);
 * executes commands sent by clients over a WebSocket (`/api/socket`), one at a time, writing the changes to the files,
   and tells all clients that the model changed, so that they refresh;
-* renders diagrams as SVG (`/api/diagrams/<id>.svg`);
+* renders diagrams as SVG (`/api/diagrams/<id>.svg`), and previews of generated diagrams that are not stored
+  (`/api/preview.svg`);
 * allocates identifiers (`POST /api/identifiers`).
 
 When two users edit the same element at the same moment, the last write wins. See "Collaboration server" in
@@ -59,6 +60,18 @@ class Session:
             if not socket.closed:
                 await socket.send_str(text)
 
+    async def preview(self, diagram_type: str, rule: str, arguments: tuple[tuple[str, str], ...]) -> str:
+        """The SVG of a generated diagram that is not stored, rendered at most once per version of the model."""
+        key = f"{diagram_type}:{rule}:{arguments}"
+        async with self.lock:
+            cached = self._svg.get(key)
+            if cached is not None and cached[0] == self.version:
+                return cached[1]
+            loop = asyncio.get_running_loop()
+            svg = await loop.run_in_executor(None, self.renderer.preview, diagram_type, rule, arguments)
+            self._svg[key] = (self.version, svg)
+            return svg
+
     async def svg(self, identifier: str) -> str:
         """The SVG of a diagram, rendered at most once per version of the model."""
         async with self.lock:
@@ -79,6 +92,7 @@ def create_app(session: Session) -> web.Application:
     app.router.add_get("/static/{name}", static)
     app.router.add_get("/api/model", model)
     app.router.add_get("/api/diagrams/{identifier}.svg", diagram)
+    app.router.add_get("/api/preview.svg", preview)
     app.router.add_post("/api/identifiers", identifier)
     app.router.add_post("/api/commands", command)
     app.router.add_get("/api/socket", socket)
@@ -112,6 +126,19 @@ async def diagram(request: web.Request) -> web.Response:
         svg = await session.svg(request.match_info["identifier"])
     except RenderError as error:
         return web.json_response({"error": str(error)}, status=404 if "no diagram" in str(error) else 500)
+    return web.Response(text=svg, content_type="image/svg+xml")
+
+
+async def preview(request: web.Request) -> web.Response:
+    """A generated diagram that is not stored: `?type=<diagram type>&rule=<rule>&<parameter>=<value>…`."""
+    session = request.app[_SESSION]
+    query = request.query
+    diagram_type, rule = query.get("type", ""), query.get("rule", "")
+    arguments = tuple((key, value) for key, value in query.items() if key not in ("type", "rule", "version"))
+    try:
+        svg = await session.preview(diagram_type, rule, arguments)
+    except RenderError as error:
+        return web.json_response({"error": str(error)}, status=400)
     return web.Response(text=svg, content_type="image/svg+xml")
 
 

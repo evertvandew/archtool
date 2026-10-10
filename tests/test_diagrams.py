@@ -327,3 +327,15 @@ def test_negative_positions_are_moved_into_view() -> None:
     content, geometry = hinted_layout()
     result = apply_position_hints(geometry, content, {"c_1": Layout("c_1", -30, 0)}, orthogonal=True)
     assert boxes(result)["c_1"][0] == 12
+
+
+def test_preview_of_generated_diagram(repository: Repository, elk: list[str]) -> None:
+    renderer = Renderer(repository, elk)
+    root = ElementTree.fromstring(renderer.preview("requirement_breakdown", "requirement_breakdown", (("root", "requirement_1"),)))
+    shown = {g.get("data-id") for g in root.iter(f"{SVG}g")} - {None}
+    assert shown == {"requirement_1", "requirement_4", "requirement_5",
+                     "requirement_contains_requirement_1", "requirement_contains_requirement_2"}  # fmt: skip
+    with pytest.raises(RenderError, match="not an element of the model"):
+        renderer.preview("requirement_breakdown", "requirement_breakdown", (("root", "requirement_9"),))
+    with pytest.raises(RenderError, match="needs a value for parameter 'root'"):
+        renderer.preview("requirement_breakdown", "requirement_breakdown", ())

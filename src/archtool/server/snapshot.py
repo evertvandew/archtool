@@ -52,6 +52,7 @@ def snapshot(model: Model, rules: Rules, findings: list[Finding], version: int) 
     return {
         "version": version,
         "types": types(metamodel),
+        "rules": generation_rules(rules),
         "elements": elements,
         "diagrams": diagrams,
         "findings": [finding.to_json() for finding in findings],
@@ -75,6 +76,19 @@ def _diagram_elements(runner: Runner, diagram: DiagramFile) -> list[str]:
     found |= {line.element for line in content.lines} | set(content.participants)
     found |= {event.element for event in content.events}
     return sorted(found, key=identifier_key)
+
+
+def generation_rules(rules: Rules) -> Json:
+    """The parameters of the generation rules: their names, types and defaults (None if they have none)."""
+    return {
+        name: {
+            "parameters": [
+                {"name": p.ident, "type": p.type, "default": p.default.value if p.default is not None else None}
+                for p in rule.parameters
+            ]
+        }
+        for name, rule in rules.program.diagrams.items()
+    }
 
 
 def types(metamodel: MetaModel) -> Json:

@@ -6,7 +6,8 @@ from pathlib import Path
 import pytest
 from aiohttp.test_utils import TestClient
 
-from archtool.diagrams.render import RenderError, Renderer
+from archtool.diagrams.render import Renderer
+from archtool.formats.diagram_file import DiagramFile, Generate
 from archtool.repository import Repository, load_repository
 from archtool.server.app import Session, create_app
 from tests.conftest import SIMPLIFIED_ARCADIA
@@ -22,11 +23,11 @@ class FakeRenderer(Renderer):
         super().__init__(repository, ["true"])
         self.calls = 0
 
-    def render(self, identifier: str) -> str:
-        if identifier not in self.repository.model.diagrams:
-            raise RenderError(f"there is no diagram '{identifier}'")
+    def render_file(self, diagram: DiagramFile) -> str:
         self.calls += 1
-        return f'<svg xmlns="http://www.w3.org/2000/svg" data-diagram="{identifier}"/>'
+        generate = next((s for s in diagram.statements if isinstance(s, Generate)), None)
+        arguments = "".join(f" data-{name}={value!r}" for name, value in generate.arguments) if generate else ""
+        return f'<svg xmlns="http://www.w3.org/2000/svg" data-diagram="{diagram.id}"{arguments}/>'
 
 
 @pytest.fixture
@@ -152,3 +153,30 @@ async def test_diagrams_are_cached_per_version(client: Client, session: Session)
     assert renderer.calls == 2
     response = await client.get("/api/diagrams/mission_7.svg")
     assert response.status == 404 and "no diagram" in (await response.json())["error"]
+
+
+async def test_generation_rules_in_snapshot(client: Client) -> None:
+    rules = (await (await client.get("/api/model")).json())["rules"]
+    assert rules["requirement_breakdown"] == {
+        "parameters": [{"name": "root", "type": "requirement", "default": None},
+                       {"name": "depth", "type": "int", "default": 3}],
+    }  # fmt: skip
+    assert rules["mission"] == {"parameters": []}
+
+
+async def test_preview(client: Client, session: Session) -> None:
+    url = "/api/preview.svg?type=requirement_breakdown&rule=requirement_breakdown&root=requirement_1&version=0"
+    response = await client.get(url)
+    assert response.status == 200
+    assert await response.text() == (
+        '<svg xmlns="http://www.w3.org/2000/svg" data-diagram="requirement_breakdown_preview" data-root=\'requirement_1\'/>'
+    )
+    await client.get(url)
+    renderer = session.renderer
+    assert isinstance(renderer, FakeRenderer) and renderer.calls == 1  # Cached until the model changes.
+    # Nothing is stored in the model.
+    assert "requirement_breakdown_preview" not in session.repository.model.diagrams
+    response = await client.get("/api/preview.svg?type=requirement&rule=x&root=requirement_1")
+    assert response.status == 400 and "no diagram type 'requirement'" in (await response.json())["error"]
+    response = await client.get("/api/preview.svg?type=requirement_breakdown&rule=mission&root=requirement_1")
+    assert response.status == 400 and "not a generation rule" in (await response.json())["error"]
