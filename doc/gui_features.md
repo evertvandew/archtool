@@ -40,7 +40,7 @@ Every change the client makes is a command of the editing engine (see "Command i
 | Unsaved edits       | When the model changes while the form has unsaved edits, the edits are kept and a notice says that the model changed, with a link to discard them. | I |
 | Save button         | When the entry is unchanged, the save button is greyed-out. When the user makes any edit, the save button become active. | I |
 | Delete element      | A Delete button asks for confirmation, then sends `delete <id>`, which also deletes everything that cannot exist without the element. | I |
-| Hierarchy: move     | For entities: a "Part of" select of the possible parents (elements of types that a HierarchyRelationship type allows as parent of this type), or "(top level)", and a Move button (`move <id> parent=…`). | I |
+| Hierarchy: move     | For entities: "Part of" shows the parent as a link that selects it, or "(top level)", with a Change button; Change opens a popup with a select of the possible parents (elements of types that a HierarchyRelationship type allows as parent of this type) and "(top level)", and Move and Cancel buttons; Move sends `move <id> parent=…` and closes the popup, or shows the error in it. | I |
 | Hierarchy: parts    | The element's parts, as links that select them. | I |
 | Hierarchy: add part | A form with the types that can be parts of this element and a name, which adds a part (`add <type> name="…" parent=<id>`). | I |
 | Ports               | For entities: the element's ports as links with their types, and a form with the port types this element can own and a name, which adds a port (`add <type> owner=<id> name="…"`). | I |

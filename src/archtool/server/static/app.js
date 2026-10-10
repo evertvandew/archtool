@@ -384,14 +384,12 @@ function hierarchySection(id) {
     && hierarchies(element(p).type, e.type).length);
   const childTypes = Object.keys(types()).filter((t) => isEntity(t) && hierarchies(e.type, t).length);
   const children = Object.keys(elements()).filter((c) => element(c).parent === id);
-  const parentSelect = el("select", {"aria-label": "Parent"}, option("", "(top level)", !e.parent),
-    parentCandidates.map((p) => option(p, `${label(p)} (${p})`, p === e.parent)));
   const parts = [el("h3", {}, "Hierarchy")];
   if (parentCandidates.length || e.parent) {
-    parts.push(el("form", {className: "actions", onsubmit: (event) => {
-        event.preventDefault();
-        send(`move ${id} parent=${parentSelect.value}`);
-      }}, "Part of", parentSelect, el("button", {type: "submit"}, "Move")));
+    const dialog = moveDialog(id, parentCandidates);
+    parts.push(el("div", {className: "actions"}, "Part of",
+      e.parent ? link(e.parent) : el("span", {className: "muted"}, "(top level)"),
+      el("button", {type: "button", onclick: () => dialog.showModal()}, "Change")), dialog);
   }
   if (children.length) parts.push(el("ul", {className: "links"}, children.map((c) => el("li", {}, link(c)))));
   if (childTypes.length) {
@@ -403,6 +401,29 @@ function hierarchySection(id) {
       }}, "Add part", typeSelect, name, el("button", {type: "submit"}, "Add")));
   }
   return parts.length > 1 ? parts : [];
+}
+
+// A popup to move an element to another parent, or to the top level.
+function moveDialog(id, candidates) {
+  const e = element(id);
+  const parentSelect = el("select", {"aria-label": "Parent"}, option("", "(top level)", !e.parent),
+    candidates.map((p) => option(p, `${label(p)} (${p})`, p === e.parent)));
+  const error = el("p", {className: "notice", hidden: true});
+  const dialog = el("dialog", {className: "popup", "aria-label": `Move ${label(id)}`});
+  const close = () => dialog.close();
+  dialog.append(el("form", {onsubmit: async (event) => {
+      event.preventDefault();
+      if (parentSelect.value === (e.parent || "")) { close(); return; }
+      const result = await send(`move ${id} parent=${parentSelect.value}`);
+      if (result.ok) close();
+      else { error.textContent = result.error || "The element cannot be moved."; error.hidden = false; }
+    }},
+    el("h3", {}, `Move ${label(id)}`),
+    error,
+    el("div", {className: "actions"}, "Part of", parentSelect),
+    el("div", {className: "actions"}, el("button", {type: "submit"}, "Move"),
+       el("button", {type: "button", onclick: close}, "Cancel"))));
+  return dialog;
 }
 
 function portsSection(id) {

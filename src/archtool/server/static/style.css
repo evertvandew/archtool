@@ -72,8 +72,8 @@ form.stacked { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0
 .actions { display: flex; gap: 0.4rem; margin-top: 0.8rem; flex-wrap: wrap; align-items: center; }
 .notice { background: #fff8c5; border: 1px solid #d4a72c; padding: 0.4rem 0.6rem; border-radius: 4px; margin-bottom: 0.8rem; }
 .links li { padding: 0.1rem 0; }
-.links a { color: var(--accent); cursor: pointer; text-decoration: none; }
-.links a:hover { text-decoration: underline; }
+.links a, .actions a { color: var(--accent); cursor: pointer; text-decoration: none; }
+.links a:hover, .actions a:hover { text-decoration: underline; }
 
 /* Not called .diagram: that is the class of the rendered SVG itself. */
 .diagram-view { border: 1px solid var(--border); border-radius: 4px; overflow: auto; padding: 0.5rem; background: #fff; }
@@ -88,3 +88,7 @@ form.stacked { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0
 .log .ok { color: var(--ok); }
 .log .failed { color: var(--error); }
 #command { width: 100%; font-family: ui-monospace, monospace; }
+
+.popup { border: 1px solid var(--border); border-radius: 6px; padding: 1rem; min-width: 320px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2); }
+.popup::backdrop { background: rgba(0, 0, 0, 0.25); }
+.popup h3 { margin-top: 0; }
