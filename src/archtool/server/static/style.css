@@ -31,7 +31,8 @@ h3 { margin: 1.2rem 0 0.4rem; font-size: 1rem; }
 
 input, select, textarea, button { font: inherit; padding: 0.25rem 0.4rem; border: 1px solid var(--border); border-radius: 4px; }
 button { background: #f6f8fa; cursor: pointer; }
-button:hover { background: #eef1f4; }
+button:hover:not(:disabled) { background: #eef1f4; }
+button:disabled { color: var(--muted); opacity: 0.6; cursor: default; }
 button.danger { color: var(--error); }
 #search { width: 100%; }
 form.inline { display: flex; gap: 0.3rem; }

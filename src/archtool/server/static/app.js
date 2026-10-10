@@ -343,18 +343,23 @@ function attributeForm(id) {
     }
     input.id = `field-${column.name}`;
     input.dataset.original = text;
-    input.addEventListener("input", () => { state.dirty = true; });
+    input.addEventListener("input", () => update());
     inputs.set(column.name, [column, input]);
     rows.push(el("label", {for: input.id, className: column.required ? "required" : ""}, column.name), input);
   }
+  const changes = () => [...inputs].filter(([, [, input]]) => input.value !== input.dataset.original)
+    .map(([name, [column, input]]) => `${name}=${commandValue(column, input.value)}`);
+  const saveButton = el("button", {type: "submit", disabled: true, title: "No changes to save"}, "Save");
+  // The Save button is only active while a field differs from the model; undoing an edit greys it out again.
+  function update() {
+    state.dirty = changes().length > 0;
+    saveButton.disabled = !state.dirty;
+    saveButton.title = state.dirty ? "" : "No changes to save";
+  }
   const save = async (event) => {
     event.preventDefault();
-    const changes = [];
-    for (const [name, [column, input]] of inputs) {
-      if (input.value !== input.dataset.original) changes.push(`${name}=${commandValue(column, input.value)}`);
-    }
-    if (!changes.length) return;
-    const result = await send(`set ${id} ${changes.join(" ")}`);
+    if (!changes().length) return;
+    const result = await send(`set ${id} ${changes().join(" ")}`);
     if (result.ok) state.dirty = false;
   };
   const remove = async () => {
@@ -363,7 +368,7 @@ function attributeForm(id) {
     if (result.ok) { state.view = null; state.selected = null; state.dirty = false; }
   };
   return el("form", {onsubmit: save}, el("div", {className: "fields"}, rows),
-    el("div", {className: "actions"}, el("button", {type: "submit"}, "Save"),
+    el("div", {className: "actions"}, saveButton,
        el("button", {type: "button", className: "danger", onclick: remove}, "Delete")));
 }
 
