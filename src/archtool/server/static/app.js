@@ -250,7 +250,7 @@ function renderElement(content, id) {
   parts.push(attributeForm(id));
   if (isEntity(e.type)) parts.push(...hierarchySection(id), ...portsSection(id));
   if (isEntity(e.type) || hasStereotype(e.type, "Port")) parts.push(...relationshipsSection(id));
-  parts.push(...referencesSection(id));
+  parts.push(...referencesSection(id), ...diagramsSection(id));
   content.replaceChildren(...parts);
 }
 
@@ -405,6 +405,21 @@ function referencesSection(id) {
     }
   }
   return out.length ? [el("h3", {}, "Refers to"), el("ul", {className: "links"}, out)] : [];
+}
+
+function diagramsSection(id) {
+  // The diagrams in which the element appears. Opening one selects the element in it.
+  const diagrams = state.model.diagrams.filter((d) => d.elements.includes(id));
+  if (!diagrams.length) return [];
+  return [el("h3", {}, "Appears in"), el("ul", {className: "links"}, diagrams.map((d) => el("li", {},
+    el("a", {onclick: () => openDiagram(d.id, id)}, d.label), " ", el("span", {className: "muted"}, d.type))))];
+}
+
+// Open a diagram, with an element selected in it.
+function openDiagram(diagramId, elementId) {
+  select(diagramId);
+  state.selected = elementId;
+  renderTree();
 }
 
 // --- Diagrams ----------------------------------------------------------------------------------------------

@@ -75,11 +75,24 @@ async def test_model_snapshot(client: Client) -> None:
     assert model["types"]["component_port"]["properties"]["owner"] == ["component", "actor"]
     assert model["types"]["system_function"]["ancestors"] == ["function", "system_function"]
     diagram = next(d for d in model["diagrams"] if d["id"] == "logical_dataflow_2")
+    shown = ["functional_exchange_2", "functional_exchange_3", "logical_function_2", "logical_function_3", "logical_function_4"]
     assert diagram == {
         "id": "logical_dataflow_2", "type": "logical_dataflow", "label": "Heating and brewing", "kind": "BlockDiagram",
-        "generated": False, "shown": ["functional_exchange_2", "functional_exchange_3", "logical_function_2",
-                                      "logical_function_3", "logical_function_4"],
+        "generated": False, "shown": shown,
+        # The elements in the diagram include the ports that its lines use.
+        "elements": ["function_port_3", "function_port_4", "function_port_5", "function_port_6", *shown],
     }  # fmt: skip
+    # For a generated diagram, the elements follow from its generation rule.
+    mission = next(d for d in model["diagrams"] if d["id"] == "mission_1")
+    assert mission["elements"] == ["actor_1", "involves_1", "system_function_2"]
+    # An element appears in a generated diagram if it passes the diagram's generation rule.
+    allocation = next(d for d in model["diagrams"] if d["id"] == "allocation_1")
+    assert "component_1" in allocation["elements"] and "logical_function_1" in allocation["elements"]
+    function_breakdown = next(d for d in model["diagrams"] if d["id"] == "function_breakdown_1")
+    assert "system_function_2" in function_breakdown["elements"]
+    assert "logical_function_1" not in function_breakdown["elements"]
+    sequence = next(d for d in model["diagrams"] if d["id"] == "functional_sequence_1")
+    assert "functional_exchange_1" in sequence["elements"] and "logical_function_1" in sequence["elements"]
     assert model["findings"] == []
 
 

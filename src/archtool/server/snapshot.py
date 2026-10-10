@@ -6,10 +6,11 @@ anything else (floats, which keep their text, template parameters and arguments)
 
 from archtool.checker import Finding
 from archtool.formats.datatypes import DataType, EnumType, ListType, RefType, SimpleType
-from archtool.formats.diagram_file import Generate, Show
+from archtool.diagrams.content import diagram_content
+from archtool.formats.diagram_file import DiagramFile, Generate, Show
 from archtool.formats.values import Float, Scalar, Value, format_scalar
 from archtool.identifiers import identifier_key
-from archtool.language.runtime import Rules, Runner
+from archtool.language.runtime import RuleError, Rules, Runner
 from archtool.metamodel import MetaModel
 from archtool.model import Model
 
@@ -44,6 +45,7 @@ def snapshot(model: Model, rules: Rules, findings: list[Finding], version: int) 
             "kind": metamodel.types[diagram.type].stereotype.value,
             "generated": any(isinstance(s, Generate) for s in diagram.statements),
             "shown": [s.element for s in diagram.statements if isinstance(s, Show)],
+            "elements": _diagram_elements(runner, diagram),
         }
         for identifier, diagram in sorted(model.diagrams.items(), key=lambda item: identifier_key(item[0]))
     ]
@@ -54,6 +56,25 @@ def snapshot(model: Model, rules: Rules, findings: list[Finding], version: int) 
         "diagrams": diagrams,
         "findings": [finding.to_json() for finding in findings],
     }
+
+
+def _diagram_elements(runner: Runner, diagram: DiagramFile) -> list[str]:
+    """The elements that appear in a diagram. For a generated diagram, these are the elements that pass its generation
+    rule, evaluated with the diagram's arguments; for a drawn one, the elements it shows. Both also include the ports
+    drawn on its blocks, and the participants and messages of a sequence diagram. If the generation rule cannot be
+    evaluated, the diagram has no elements."""
+    found: set[str] = set()
+    try:
+        for statement in diagram.statements:
+            if isinstance(statement, Generate):
+                found |= runner.generate(statement.rule, statement.arguments)
+        content = diagram_content(runner, diagram)
+    except RuleError:
+        return []
+    found |= {*content.blocks, *(port for ports in content.ports.values() for port in ports)}
+    found |= {line.element for line in content.lines} | set(content.participants)
+    found |= {event.element for event in content.events}
+    return sorted(found, key=identifier_key)
 
 
 def types(metamodel: MetaModel) -> Json:
