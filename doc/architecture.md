@@ -264,6 +264,7 @@ Using one language for all three purposes keeps the learning curve as short as p
 
 CLI tools read commands, one per line, from a file or stdin, and write results to stdout as JSON lines.
 An option for human-readable output will be added later.
+`archtool edit` executes editing commands; it can be run with a file of commands, interactively, or as a long-running service behind the collaboration server.
 
 ```
 add function name="Compute position" parent=function_3
@@ -272,13 +273,34 @@ connect functional_exchange start=function_42 end=function_7 name="Position"
 delete function_9
 ```
 
-A result:
+A command is a name, followed by positional arguments and `key=value` arguments. Values are written as in a table cell (`high`, `42`, `[function_3, function_7]`), or as strings in double quotes, with `\"`, `\\` and `\n` as escape sequences. Lines starting with `#` are comments.
+
+| Command | Meaning |
+|---|---|
+| `add <type> key=value …` | Add an element. `parent=<id>` also places it in the hierarchy; if the meta model has several hierarchy types that fit, `hierarchy=<type>` chooses one. For a diagram type, `generate="rule(…)"` makes a generated diagram; without it, a drawn one. |
+| `connect <relationship type> start=<id> end=<id> key=value …` | Add a relationship. |
+| `set <id> key=value …` | Set attributes of an element; `key=` removes a value. |
+| `move <id> parent=<id>` | Move an element in the hierarchy; `parent=` makes it a top-level element. |
+| `delete <id> …` | Delete elements. |
+| `show <diagram> <id> …`, `hide <diagram> <id> …` | Show or hide elements in a drawn diagram. |
+| `add_chain <diagram> <chain>` | Add the relationships of a chain to a sequence diagram as messages, adding missing participants. |
+
+Every command is validated completely before the model is changed, so it either succeeds as a whole or leaves the model unchanged. Values must match their type, and references must refer to existing elements of the right types.
+
+Changes are propagated where they can be:
+
+* Deleting an element also deletes the elements that cannot exist without it: its ports, the relationships attached to it or its ports, and hierarchy relationships and relationship breakdowns that refer to it. Its children in the hierarchy become top-level elements.
+* References to deleted elements are removed from the elements that remain, e.g. from chains, and from drawn diagrams.
+* A template that is still used by instantiations cannot be deleted.
+
+After each command, the model is checked, including the verification rules. A result lists the findings the command introduced (`issues`) and resolved (`resolved`):
 
 ```
-{"ok": true, "created": ["function_42", "function_contains_function_17"], "changed": [], "issues": []}
+{"ok": true, "line": 1, "command": "add", "created": ["function_contains_function_17", "function_42"], "changed": [], "deleted": [], "issues": [{"severity": "warning", "check": "system_function_realised", "element": "function_42", "path": "model/function.csv", "message": "…"}], "resolved": []}
+{"ok": false, "line": 2, "command": "set", "error": "'priority': 'urgent' is not one of high, medium, low"}
 ```
 
-Edits made through commands are written to the files immediately, so that the files always reflect the current state and can be committed at any time.
+Edits made through commands are written to the files immediately, so that the files always reflect the current state and can be committed at any time. Only files whose content changes are written.
 
 ## Collaboration server
 

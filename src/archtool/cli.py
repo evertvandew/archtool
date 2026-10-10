@@ -9,6 +9,7 @@ from typing import TextIO
 
 from archtool.checker import Finding, Severity, check_repository
 from archtool.diagrams.render import RenderError, Renderer
+from archtool.editing.editor import Editor
 from archtool.errors import FormatError
 from archtool.identifiers import identifier_key
 from archtool.language.runtime import RuleError, Runner, load_rules
@@ -44,7 +45,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     render.add_argument("-r", "--repository", type=Path, default=Path("."), help="the model repository (default: .)")
     render.add_argument("-o", "--output", type=Path, default=None,
                         help="the directory for the SVG files (default: rendered/ in the repository)")  # fmt: skip
+    edit = commands.add_parser(
+        "edit",
+        help="change a model with commands",
+        description="Execute commands, one per line, from a file or stdin, and write the changes to the model's "
+        "files. Writes a JSON line with the result of every command, and exits with status 1 if any command failed.",
+    )
+    edit.add_argument("file", nargs="?", default="-", help="the file with commands (default: stdin)")
+    edit.add_argument("-r", "--repository", type=Path, default=Path("."), help="the model repository (default: .)")
     arguments = parser.parse_args(argv)
+    if arguments.command == "edit":
+        if arguments.file == "-":
+            return run_edit(arguments.repository, sys.stdin, sys.stdout, sys.stderr)
+        with open(arguments.file, encoding="utf-8") as commands_file:
+            return run_edit(arguments.repository, commands_file, sys.stdout, sys.stderr)
     if arguments.command == "render":
         output = arguments.output if arguments.output is not None else arguments.repository / "rendered"
         return run_render(arguments.repository, arguments.diagrams, output, sys.stdout, sys.stderr)
@@ -113,6 +127,32 @@ def run_render(root: Path, diagrams: Sequence[str], output_directory: Path, outp
             continue
         for result in rendered:
             output.write(json.dumps({"diagram": result.diagram, "file": str(result.path)}) + "\n")
+    return status
+
+
+def run_edit(root: Path, commands: TextIO, output: TextIO, errors: TextIO) -> int:
+    """Execute commands, and write their results to `output` as they are executed. Returns the exit status."""
+    try:
+        editor = Editor(load_repository(root))
+    except FormatError as error:
+        errors.write(f"{_relative(error.path, root)}:{error.line}:{error.column}: {error.message}\n")
+        return 1
+    status = 0
+    for number, line in enumerate(commands, 1):
+        result = editor.run(line.rstrip("\n"), number)
+        if result is None:
+            continue
+        if not result.ok:
+            status = 1
+        record = result.to_json()
+        for key in ("issues", "resolved"):
+            findings = record.get(key, [])
+            assert isinstance(findings, list)
+            for finding in findings:
+                if "path" in finding:
+                    finding["path"] = _relative(str(finding["path"]), root)
+        output.write(json.dumps(record, ensure_ascii=False) + "\n")
+        output.flush()
     return status
 
 

@@ -25,8 +25,8 @@ from archtool.formats.diagram_file import (
 )
 from archtool.formats.escaping import escape
 from archtool.formats.values import Argument, Parameter, parse_scalar
-from archtool.identifiers import identifier_key
-from archtool.language.runtime import Runner, load_rules
+from archtool.identifiers import identifier_key, split_identifier
+from archtool.language.runtime import Rules, Runner, load_rules
 from archtool.metamodel import MetaModel, Stereotype
 from archtool.model import Element, Model
 from archtool.repository import DIAGRAM_DIRECTORY, MODEL_DIRECTORY, Repository
@@ -58,9 +58,10 @@ class Finding:
         return result
 
 
-def check_repository(repository: Repository) -> list[Finding]:
-    """All findings for a loaded repository, sorted by file and element."""
-    checker = _Checker(repository)
+def check_repository(repository: Repository, rules: Rules | None = None) -> list[Finding]:
+    """All findings for a loaded repository, sorted by file and element. `rules` are the loaded rules of its meta
+    model; by default they are loaded from the meta model."""
+    checker = _Checker(repository, rules if rules is not None else load_rules(repository.metamodel))
     findings = [
         *checker.check_elements(),
         *checker.check_hierarchy(),
@@ -71,9 +72,10 @@ def check_repository(repository: Repository) -> list[Finding]:
 
 
 class _Checker:
-    def __init__(self, repository: Repository) -> None:
+    def __init__(self, repository: Repository, rules: Rules) -> None:
         self.model: Model = repository.model
         self.metamodel: MetaModel = repository.metamodel
+        self.rules = rules
 
     def path(self, element: Element) -> str:
         directory = DIAGRAM_DIRECTORY if self.stereotype(element).is_diagram() else MODEL_DIRECTORY
@@ -88,10 +90,11 @@ class _Checker:
     # --- Verification rules ------------------------------------------------------------------------------
 
     def check_rules(self) -> Iterator[Finding]:
-        rules = load_rules(self.metamodel)
-        for error in rules.errors:
+        for error in self.rules.errors:
             yield Finding(Severity.ERROR, "rules", error.message, None, error.path, error.line, error.column)
-        for result in Runner(rules, self.model).checks():
+        if self.rules.errors:
+            return
+        for result in Runner(self.rules, self.model).checks():
             element = self.model.get(result.element)
             yield Finding(Severity(result.severity), result.rule, result.message, element.id, self.path(element))
 
@@ -214,9 +217,12 @@ class _Checker:
 
         for statement in diagram.statements:
             match statement:
-                case Generate(rule):
+                case Generate(rule, arguments):
                     if rule not in self._names(type_name, "rules"):
                         yield error(f"rule '{rule}' is not a generation rule of {type_name}")
+                    for name, value in arguments:
+                        if split_identifier(value) is not None and value not in self.model:
+                            yield error(f"argument '{name}' of rule '{rule}' is {value}, which does not exist")
                 case Show() | Highlight() if is_sequence:
                     yield error(f"a sequence diagram has no '{_keyword(statement)}' statements")
                 case Participant() | Message() | Process() if not is_sequence:
