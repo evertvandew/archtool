@@ -14,7 +14,7 @@ It serves as:
 
 | Level | Types | Diagrams |
 |---|---|---|
-| `system_level` | `actor`, `requirement`, `test`, `system_function` | `mission` (use case), `function_breakdown` (breakdown), `requirement_traceability` (block) |
+| `system_level` | `actor`, `requirement`, `test`, `system_function` | `mission` (use case), `function_breakdown` and `requirement_breakdown` (breakdown), `requirement_traceability` (block) |
 | `logical_level` | `logical_function`, `function_port`, `functional_exchange`, `functional_chain` | `logical_dataflow` (block), `functional_sequence` (sequence) |
 | `physical_level` | `component`, `component_port`, `component_exchange` | `physical_architecture` (block), `allocation` (block) |
 
@@ -24,6 +24,8 @@ The levels are connected by relationships:
 * `allocated_to`: a logical function is allocated to a component;
 * `exchange_allocation`: a functional exchange is carried by a component exchange (a relationship breakdown);
 * `satisfies` and `covers`: system functions satisfy requirements, and tests cover them.
+
+Functions, components and requirements can be broken down into more detailed ones. Requirements are only checked for coverage and satisfaction when they are not broken down further.
 
 The meta model also contains generation rules for all diagram types except the sequence diagram, verification rules for traceability and allocation, two example queries, labels, shapes, and a Capella-like stylesheet.
 

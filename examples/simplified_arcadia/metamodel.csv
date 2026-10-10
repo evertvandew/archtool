@@ -40,6 +40,7 @@ realises;;[logical_function];[system_function];A logical function realising a sy
 name:ident;parent:ref(entity_types);child:ref(entity_types);description:text
 function_contains_function;function;function;The breakdown of a function into sub-functions.
 component_contains_component;component;component;The breakdown of a component into sub-components.
+requirement_contains_requirement;requirement;requirement;The breakdown of a requirement into more detailed requirements.
 
 @table relationship_breakdown_types
 name:ident;aggregate:ref(relationship_types);constituent:ref(relationship_types);description:text
@@ -53,6 +54,7 @@ functional_chain;functional_exchange;A sequence of functional exchanges, e.g. a 
 name:ident;kind:enum(block|sequence|breakdown|use_case);entities:list(ref(entity_types|port_types));relationships:list(ref(any_type));chains:list(ref(chain_types));rules:list(ident);description:text
 mission;use_case;[actor,system_function];[involves];;[mission];The actors and the system functions they take part in.
 function_breakdown;breakdown;[function];[function_contains_function];;[function_breakdown];The breakdown of a function into sub-functions.
+requirement_breakdown;breakdown;[requirement];[requirement_contains_requirement];;[requirement_breakdown];The breakdown of a requirement into more detailed requirements.
 requirement_traceability;block;[requirement,test,system_function];[satisfies,covers];;[traceability];The functions and tests related to a requirement.
 logical_dataflow;block;[logical_function,function_port];[functional_exchange];[functional_chain];[logical_dataflow];The leaf logical functions and the data they exchange.
 functional_sequence;sequence;[logical_function];[functional_exchange];[functional_chain];;A scenario of functional exchanges between logical functions.
@@ -61,7 +63,7 @@ allocation;block;[component,logical_function];[allocated_to,component_contains_c
 
 @table abstraction_levels
 name:ident;diagrams:list(ref(diagram_types));description:text
-system_level;[mission,function_breakdown,requirement_traceability];What the system must do, as seen from outside.
+system_level;[mission,function_breakdown,requirement_breakdown,requirement_traceability];What the system must do, as seen from outside.
 logical_level;[logical_dataflow,functional_sequence];How the system works, independent of its implementation.
 physical_level;[physical_architecture,allocation];How the system is built.
 
@@ -101,6 +103,7 @@ mission;system_function;use_case;;
 ;covers;;none;open_arrow
 ;Relationship_breakdown;;none;none
 function_breakdown;function_contains_function;;none;none
+requirement_breakdown;requirement_contains_requirement;;none;none
 
 @rules
 # Generation rules
@@ -111,6 +114,10 @@ diagram mission:
     show involves
 
 diagram function_breakdown(root: function, depth: int = 3):
+    show root
+    show root.descendants(depth)
+
+diagram requirement_breakdown(root: requirement, depth: int = 3):
     show root
     show root.descendants(depth)
 
@@ -142,12 +149,12 @@ diagram allocation(root: component):
 # Verification rules
 
 check requirement_covered (error):
-    for each r in requirement where verification_method = test:
+    for each r in requirement where verification_method = test and children is empty:
         require r.sources(covers) is not empty
         otherwise "Requirement {r} is verified by test, but is not covered by any test."
 
 check requirement_satisfied (warning):
-    for each r in requirement where verification_method != inspection:
+    for each r in requirement where verification_method != inspection and children is empty:
         require r.sources(satisfies) is not empty
         otherwise "Requirement {r} is not satisfied by any system function."
 

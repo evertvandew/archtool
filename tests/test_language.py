@@ -261,7 +261,9 @@ def test_checker_reports_rule_errors(example: Path) -> None:
     metamodel = example / "metamodel.csv"
     metamodel.write_text(metamodel.read_text().replace("for each r in requirement where", "for each r in requirment where"))
     findings = check_repository(load_repository(example))
-    assert [(f.check, f.line, f.column) for f in findings] == [("rules", 145, 19), ("rules", 150, 19)]
+    lines = [n for n, line in enumerate(metamodel.read_text().split("\n"), 1) if "in requirment where" in line]
+    assert len(lines) == 2
+    assert [(f.check, f.line, f.column) for f in findings] == [("rules", line, 19) for line in lines]
     assert "did you mean 'requirement'" in findings[0].message
 
 
