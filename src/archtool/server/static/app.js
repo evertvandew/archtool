@@ -5,12 +5,16 @@
 // over a WebSocket. When the model changes, by this client or another one, the server says so, and the client
 // fetches the model again.
 
+// Where the browser keeps what is collapsed in the tree. Declared before `state`, which reads it.
+const COLLAPSED_KEY = "archtool.collapsed";
+
 const state = {
   model: null,          // The snapshot from /api/model.
   view: null,           // {kind: "element" | "diagram", id}
   selected: null,       // The selected element: in the tree, or in a diagram.
   dirty: false,         // Whether the element form has unsaved edits.
   search: "",
+  collapsed: loadCollapsed(),  // The elements, and type groups (`type:<name>`), collapsed in the tree.
 };
 
 // --- Talking to the server ---------------------------------------------------------------------------------
@@ -151,6 +155,7 @@ function select(id) {
   else state.view = {kind: "element", id};
   // The view is kept in the URL, so that links to elements and diagrams can be shared.
   if (location.hash !== `#${id}`) history.replaceState(null, "", `#${id}`);
+  if (e && isEntity(e.type)) reveal(id);
   renderSidebar();
   renderContent({});
 }
@@ -189,17 +194,77 @@ function renderTree() {
     if (!children.has(parent)) children.set(parent, []);
     children.get(parent).push(id);
   }
+  const descendants = (id) => (children.get(id) || []).reduce((count, kid) => count + 1 + descendants(kid), 0);
   const branch = (id) => {
     const kids = children.get(id) || [];
-    return el("li", {}, treeItem(id), kids.length ? el("ul", {}, kids.map(branch)) : null);
+    const collapsed = kids.length > 0 && state.collapsed.has(id);
+    const toggle = kids.length
+      ? el("button", {className: "toggle", "aria-expanded": String(!collapsed),
+                      "aria-label": `${collapsed ? "Expand" : "Collapse"} ${label(id)}`,
+                      onclick: () => setCollapsed([id], !collapsed)}, collapsed ? "▸" : "▾")
+      : el("span", {className: "toggle"});
+    const hidden = collapsed ? el("span", {className: "hidden-count", title: "collapsed parts"}, `+${descendants(id)}`) : null;
+    return el("li", {}, el("div", {className: "row"}, toggle, treeItem(id), hidden),
+              kids.length && !collapsed ? el("ul", {}, kids.map(branch)) : null);
   };
   const roots = children.get(null) || [];
   const groups = Object.keys(types()).filter(isEntity).map((type) => {
     const ofType = roots.filter((id) => element(id).type === type);
     if (!ofType.length) return null;
-    return el("details", {open: true}, el("summary", {}, `${type} (${ofType.length})`), el("ul", {}, ofType.map(branch)));
+    const key = `type:${type}`;
+    const group = el("details", {open: !state.collapsed.has(key)},
+                     el("summary", {}, `${type} (${ofType.length})`), el("ul", {}, ofType.map(branch)));
+    group.addEventListener("toggle", () => {
+      if (group.open === state.collapsed.has(key)) setCollapsed([key], !group.open, {render: false});
+    });
+    return group;
   });
   tree.replaceChildren(...groups.filter(Boolean));
+}
+
+// Collapsing parts of the tree. What is collapsed is kept in the browser, for this viewer only.
+function loadCollapsed() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(COLLAPSED_KEY) || "[]");
+    return new Set(Array.isArray(stored) ? stored : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function setCollapsed(keys, collapsed, {render = true} = {}) {
+  for (const key of keys) {
+    if (collapsed) state.collapsed.add(key);
+    else state.collapsed.delete(key);
+  }
+  try {
+    localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...state.collapsed]));
+  } catch {
+    // Without storage, the tree still works; it is just not remembered.
+  }
+  if (render) renderTree();
+}
+
+// The elements that have parts in the tree.
+function parentKeys() {
+  return [...new Set(Object.values(elements()).filter((e) => isEntity(e.type) && e.parent).map((e) => e.parent))];
+}
+
+// The groups of top-level elements, by type.
+function groupKeys() {
+  return Object.keys(types()).filter(isEntity).map((type) => `type:${type}`);
+}
+
+// Expand the ancestors of an element, so that it is visible in the tree.
+function reveal(id) {
+  const keys = [];
+  let current = element(id);
+  while (current && current.parent && element(current.parent)) {
+    keys.push(current.parent);
+    current = element(current.parent);
+  }
+  if (current) keys.push(`type:${current.type}`);
+  if (keys.some((key) => state.collapsed.has(key))) setCollapsed(keys, false, {render: false});
 }
 
 function treeItem(id) {
@@ -564,6 +629,7 @@ function selectInDiagram(diagram, id) {
     actions.push(el("button", {onclick: () => send(`hide ${diagram.id} ${id}`)}, "Hide from diagram"));
   }
   panel.replaceChildren(...actions);
+  if (isEntity(element(id).type)) reveal(id);
   renderTree();
 }
 
@@ -587,6 +653,10 @@ function log(command, result) {
 }
 
 // --- Start -------------------------------------------------------------------------------------------------
+
+// Expanding all opens everything; collapsing all leaves the groups open, showing the top-level elements.
+document.getElementById("expand-all").addEventListener("click", () => setCollapsed([...parentKeys(), ...groupKeys()], false));
+document.getElementById("collapse-all").addEventListener("click", () => setCollapsed(parentKeys(), true));
 
 document.getElementById("search").addEventListener("input", (event) => {
   state.search = event.target.value;
