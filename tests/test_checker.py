@@ -49,7 +49,7 @@ def test_example_has_no_findings() -> None:
             ("reference-type", "covers_2", "'end' refers to system_function_2, which is not a requirement"),
         ),
         (
-            "model/requirement.csv", ";medium;test", ";;test",
+            "model/requirement.csv", "after the request.;medium;test", "after the request.;;test",
             ("required", "requirement_2", "'priority' is required"),
         ),
         (

@@ -29,7 +29,7 @@ def example(tmp_path: Path) -> Path:
 def test_load_example() -> None:
     repository = load_repository(SIMPLIFIED_ARCADIA)
     model = repository.model
-    assert len(model) == 64
+    assert len(model) == 74
     assert model.get("requirement_1").values["priority"] == "high"
     assert [e.id for e in model.elements_of("function")] == [
         "logical_function_1", "logical_function_2", "logical_function_3", "logical_function_4",
@@ -54,7 +54,10 @@ def test_saving_an_unchanged_model_does_not_touch_files(example: Path) -> None:
 
 def test_referrers() -> None:
     model = load_repository(SIMPLIFIED_ARCADIA).model
-    assert model.referrers("requirement_1") == [Reference("covers_1", "end"), Reference("satisfies_1", "end")]
+    assert model.referrers("requirement_1") == [
+        Reference("covers_1", "end"), Reference("requirement_contains_requirement_1", "parent"),
+        Reference("requirement_contains_requirement_2", "parent"), Reference("satisfies_1", "end"),
+    ]  # fmt: skip
     assert Reference("functional_chain_1", "relationships") in model.referrers("functional_exchange_2")
 
 
@@ -62,18 +65,18 @@ def test_add_and_remove_elements(example: Path) -> None:
     repository = load_repository(example)
     model = repository.model
     identifier = model.new_identifier("requirement")
-    assert identifier == "requirement_4"
+    assert identifier == "requirement_6"
     model.add(Element(identifier, "requirement", {"name": "Descale", "priority": "low"}))
     model.remove("requirement_3")
     save_repository(repository)
     text = (example / "model" / "requirement.csv").read_text()
-    assert text.startswith("@last_number 4\n")
+    assert text.startswith("@last_number 6\n")
     assert "requirement_3;" not in text
-    assert text.endswith("requirement_4;Descale;;low;\n")
+    assert text.endswith("requirement_6;Descale;;low;\n")
     # Numbers are never reused, even after the element with the highest number is deleted.
     reloaded = load_repository(example)
-    reloaded.model.remove("requirement_4")
-    assert reloaded.model.new_identifier("requirement") == "requirement_5"
+    reloaded.model.remove("requirement_6")
+    assert reloaded.model.new_identifier("requirement") == "requirement_7"
 
 
 def test_set_value_updates_references(example: Path) -> None:

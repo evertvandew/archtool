@@ -1,4 +1,6 @@
-@last_number 2
+@last_number 4
 id:id;start:ref(test);end:ref(requirement);name:str
 covers_1;test_1;requirement_1;
 covers_2;test_2;requirement_2;
+covers_3;test_3;requirement_4;
+covers_4;test_3;requirement_5;

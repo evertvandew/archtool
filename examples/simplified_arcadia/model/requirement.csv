@@ -1,5 +1,7 @@
-@last_number 3
+@last_number 5
 id:id;name:str;text:text;priority:enum(high|medium|low);verification_method:enum(test|inspection|analysis|demonstration)
 requirement_1;Brew coffee;The machine shall brew a cup of coffee on request of the user.;high;test
 requirement_2;Brewing time;The machine shall deliver a cup of coffee within 60 s after the request.;medium;test
 requirement_3;Food-safe materials;All parts in contact with water or coffee shall be made of food-safe materials.;low;inspection
+requirement_4;Brew strength;The user shall be able to choose the strength of the coffee: mild, normal or strong.;medium;test
+requirement_5;Cup size;The user shall be able to choose a small or a large cup.;low;test

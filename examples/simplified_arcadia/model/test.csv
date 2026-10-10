@@ -1,4 +1,5 @@
-@last_number 2
+@last_number 3
 id:id;name:str;procedure:text
 test_1;Brew a cup;1. Fill the water tank.\n2. Select coffee.\n3. Check that a cup of coffee is delivered.
 test_2;Time a brew;1. Select coffee.\n2. Measure the time until the cup is full.
+test_3;Choose strength and size;1. Brew a mild, small cup.\n2. Brew a strong, large cup.\n3. Check the strength and the amount of coffee in both cups.

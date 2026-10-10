@@ -92,8 +92,8 @@ def test_add_with_parent(editor: Editor, example: Path) -> None:
 
 def test_connect(editor: Editor) -> None:
     ok(editor, 'add requirement name="Grind fresh" text="Grind beans." priority=high verification_method=analysis')
-    result = ok(editor, "connect satisfies start=system_function_2 end=requirement_4")
-    assert result.created == ["satisfies_3"]
+    result = ok(editor, "connect satisfies start=system_function_2 end=requirement_6")
+    assert result.created == ["satisfies_5"]
     assert [f.check for f in result.resolved] == ["requirement_satisfied"]
 
 

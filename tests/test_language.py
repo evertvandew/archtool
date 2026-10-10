@@ -98,10 +98,10 @@ def test_navigation_syntax() -> None:
     ("expression", "expected"),
     [
         ("requirement where priority = high", ["requirement_1"]),
-        ("requirement where verification_method = test", ["requirement_1", "requirement_2"]),
-        ("requirement where priority in [high, low]", ["requirement_1", "requirement_3"]),
+        ("requirement where verification_method = test", ["requirement_1", "requirement_2", "requirement_4", "requirement_5"]),
+        ("requirement where priority in [high, low]", ["requirement_1", "requirement_3", "requirement_5"]),
         ("requirement where text contains \"SAFE\"", ["requirement_3"]),
-        ("requirement where name matches \"^Brew\"", ["requirement_1", "requirement_2"]),
+        ("requirement where name matches \"^Brew\"", ["requirement_1", "requirement_2", "requirement_4"]),
         ("function where children is empty", [
             "logical_function_1", "logical_function_2", "logical_function_3", "logical_function_4",
             "system_function_2", "system_function_3", "system_function_4",
@@ -128,13 +128,13 @@ def test_navigation_syntax() -> None:
         ("functional_exchange to logical_function_4", ["functional_exchange_1", "functional_exchange_3"]),
         ("covers to (requirement where priority = high)", ["covers_1"]),
         ("(requirement where priority = high) union requirement_3", ["requirement_1", "requirement_3"]),
-        ("requirement except (requirement where priority = high)", ["requirement_2", "requirement_3"]),
+        ("requirement except (requirement where priority = high)", ["requirement_2", "requirement_3", "requirement_4", "requirement_5"]),
         ("test where some r in targets(covers): r.priority = high", ["test_1"]),
         ("test where every r in targets(covers): r.priority = high", ["test_1"]),
         ("logical_function where count(targets(allocated_to)) = 1", [
             "logical_function_1", "logical_function_2", "logical_function_3", "logical_function_4",
         ]),
-        ("requirement where not (priority = high or priority = low)", ["requirement_2"]),
+        ("requirement where not (priority = high or priority = low)", ["requirement_2", "requirement_4"]),
         ("Relationship_breakdown", ["exchange_allocation_1", "exchange_allocation_2", "exchange_allocation_3"]),
         ("requirement_9", []),
     ],
@@ -144,8 +144,8 @@ def test_expressions(runner: Runner, expression: str, expected: list[str]) -> No
 
 
 def test_values(runner: Runner) -> None:
-    assert runner.expression("count(requirement)").records() == [{"value": 3}]
-    assert [r["value"] for r in runner.expression("requirement.priority").records()] == ["high", "medium", "low"]
+    assert runner.expression("count(requirement)").records() == [{"value": 5}]
+    assert [r["value"] for r in runner.expression("requirement.priority").records()] == ["high", "medium", "low", "medium", "low"]
     assert runner.expression("component_2.type").records() == [{"value": "component"}]
 
 
@@ -247,14 +247,21 @@ def example(tmp_path: Path) -> Path:
 
 def test_checker_runs_verification_rules(example: Path) -> None:
     covers = example / "model" / "covers.csv"
-    covers.write_text(covers.read_text().replace("covers_1;test_1;requirement_1;\n", ""))
+    covers.write_text(covers.read_text().replace("covers_2;test_2;requirement_2;\n", ""))
     findings = check_repository(load_repository(example))
     assert [(f.severity.value, f.check, f.element, f.path, f.message) for f in findings] == [
         (
-            "error", "requirement_covered", "requirement_1", "model/requirement.csv",
-            "Requirement Brew coffee is verified by test, but is not covered by any test.",
+            "error", "requirement_covered", "requirement_2", "model/requirement.csv",
+            "Requirement Brewing time is verified by test, but is not covered by any test.",
         )
     ]  # fmt: skip
+
+
+def test_broken_down_requirements_are_not_checked(example: Path) -> None:
+    """Brew coffee is broken down into Brew strength and Cup size, so only those need to be covered by a test."""
+    covers = example / "model" / "covers.csv"
+    covers.write_text(covers.read_text().replace("covers_1;test_1;requirement_1;\n", ""))
+    assert check_repository(load_repository(example)) == []
 
 
 def test_checker_reports_rule_errors(example: Path) -> None:
@@ -293,6 +300,8 @@ def test_query_columns_and_order(repository: Repository) -> None:
     result = Runner(load_rules(metamodel), repository.model).query("q")
     assert result.records() == [
         {"id": "requirement_3", "name": "Food-safe materials", "priority": "low"},
+        {"id": "requirement_5", "name": "Cup size", "priority": "low"},
         {"id": "requirement_2", "name": "Brewing time", "priority": "medium"},
+        {"id": "requirement_4", "name": "Brew strength", "priority": "medium"},
         {"id": "requirement_1", "name": "Brew coffee", "priority": "high"},
     ]

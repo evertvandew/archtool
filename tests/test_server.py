@@ -114,16 +114,16 @@ async def test_websocket_broadcasts_changes(client: Client) -> None:
     second = await client.ws_connect("/api/socket")
     assert json.loads((await first.receive()).data) == {"type": "hello", "version": 0}
     assert json.loads((await second.receive()).data) == {"type": "hello", "version": 0}
-    await first.send_str(json.dumps({"request": 7, "command": "delete test_1"}))
+    await first.send_str(json.dumps({"request": 7, "command": "delete test_2"}))
     # Every client is told that the model changed; the sender also receives the result.
     messages = [json.loads((await first.receive()).data) for _ in range(2)]
     assert {"type": "changed", "version": 1} in messages
     result = next(m for m in messages if m["type"] == "result")
-    assert result["request"] == 7 and result["deleted"] == ["covers_1", "test_1"]
+    assert result["request"] == 7 and result["deleted"] == ["covers_2", "test_2"]
     assert [issue["check"] for issue in result["issues"]] == ["requirement_covered"]
     assert json.loads((await second.receive()).data) == {"type": "changed", "version": 1}
     # A failed command changes nothing, so nobody is told about it.
-    await second.send_str(json.dumps({"request": 1, "command": "delete test_1"}))
+    await second.send_str(json.dumps({"request": 1, "command": "delete test_2"}))
     failed = json.loads((await second.receive()).data)
     assert failed["type"] == "result" and not failed["ok"]
     await second.send_str("not json")
@@ -134,9 +134,9 @@ async def test_websocket_broadcasts_changes(client: Client) -> None:
 
 async def test_identifiers(client: Client, example: Path) -> None:
     response = await client.post("/api/identifiers", json={"type": "test"})
-    assert await response.json() == {"id": "test_3"}
-    assert (await (await client.post("/api/identifiers", json={"type": "test"})).json()) == {"id": "test_4"}
-    assert (example / "model" / "test.csv").read_text().startswith("@last_number 4\n")
+    assert await response.json() == {"id": "test_4"}
+    assert (await (await client.post("/api/identifiers", json={"type": "test"})).json()) == {"id": "test_5"}
+    assert (example / "model" / "test.csv").read_text().startswith("@last_number 5\n")
     response = await client.post("/api/identifiers", json={"type": "printer"})
     assert response.status == 400
 

@@ -35,5 +35,5 @@ A coffee machine, in [`model/`](model) and [`diagrams/`](diagrams):
 
 * The user selects a drink (`system_function_2`), after which the machine heats water (`system_function_3`) and brews (`system_function_4`).
 * Four logical functions realise these, and are allocated to three components: a controller, a boiler and a pump unit.
-* Three requirements: two verified by tests, and one, a design constraint on materials, verified by inspection, so it is not expected to be covered by a test.
+* Requirements: brewing coffee, broken down into choosing the strength and the cup size; the brewing time; and a design constraint on materials. The design constraint is verified by inspection, so it is not expected to be covered by a test; the others are verified by tests.
 * The diagrams include generated diagrams, a drawn block diagram that highlights a functional chain, and a drawn sequence diagram.

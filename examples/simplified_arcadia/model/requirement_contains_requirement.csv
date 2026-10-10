@@ -1,0 +1,4 @@
+@last_number 2
+id:id;parent:ref(requirement);child:ref(requirement);name:str
+requirement_contains_requirement_1;requirement_1;requirement_4;
+requirement_contains_requirement_2;requirement_1;requirement_5;
