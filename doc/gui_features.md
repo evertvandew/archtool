@@ -11,6 +11,7 @@ Every change the client makes is a command of the editing engine (see "Command i
 | Feature | Description | Status |
 |---|---|---|
 | Three-panel layout | A header, with the model explorer and the diagram list on the left, the selected element or diagram in the middle, and the findings and command console on the right. | I |
+| Resizable columns | The lines between the three columns can be dragged to change the widths of the side columns, and the widgets in the columns (forms, tree, diagrams, console) follow their width; a side column is at least 160 pixels wide and the middle column at least 320, also when the window is made narrower; the arrow keys move a focused splitter by 16 pixels, double-clicking it restores the default width (300 pixels left, 340 right), and the chosen widths are kept in the browser's localStorage, per viewer. | I |
 | Connection status | The header shows whether the client is connecting, connected or disconnected, with the version of the model it shows. | I |
 | Reconnecting | When the WebSocket closes, pending commands fail, the status says "disconnected — reconnecting…", and the client reconnects every 2 seconds. | I |
 | Live updates | When the server reports that the model changed (by this client or another one), the client fetches `/api/model` again and redraws the explorer, findings and content; a selection or view whose element was deleted is cleared. | I |

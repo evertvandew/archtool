@@ -19,11 +19,16 @@ header h1 { font-size: 1.1rem; margin: 0; }
 .status.connected { color: var(--ok); }
 .status.disconnected { color: var(--error); }
 
-main { flex: 1; display: grid; grid-template-columns: 300px 1fr 340px; min-height: 0; }
-#sidebar, #side { overflow: auto; padding: 0.5rem; }
-#sidebar { border-right: 1px solid var(--border); }
-#side { border-left: 1px solid var(--border); display: flex; flex-direction: column; }
-#content { overflow: auto; padding: 1rem; }
+/* The widths of the side columns are set by dragging the splitters between the columns (see app.js). */
+main { flex: 1; display: grid; grid-template-columns: var(--left-width, 300px) 7px minmax(0, 1fr) 7px var(--right-width, 340px);
+       min-height: 0; }
+#sidebar, #side { overflow: auto; padding: 0.5rem; min-width: 0; }
+#side { display: flex; flex-direction: column; }
+#content { overflow: auto; padding: 1rem; min-width: 0; }
+.splitter { cursor: col-resize; touch-action: none; background: linear-gradient(var(--border), var(--border)) center / 1px 100% no-repeat; }
+.splitter:hover, .splitter:focus-visible, .splitter.dragging { background-color: var(--selected); background-size: 3px 100%;
+  background-image: linear-gradient(var(--accent), var(--accent)); outline: none; }
+body.resizing { cursor: col-resize; user-select: none; }
 h2 { font-size: 0.8rem; text-transform: uppercase; color: var(--muted); margin: 1rem 0 0.4rem; }
 h3 { margin: 1.2rem 0 0.4rem; font-size: 1rem; }
 .hint, .muted { color: var(--muted); }

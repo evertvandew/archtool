@@ -678,7 +678,109 @@ function log(command, result) {
   logElement.scrollTop = logElement.scrollHeight;
 }
 
+// --- Resizable columns ------------------------------------------------------------------------------------
+
+// The widths of the side columns are kept in the browser, for this viewer only. They are the widths the viewer
+// chose; on a narrower window the columns are narrower, so that the middle column keeps a usable width.
+const COLUMNS_KEY = "archtool.columns";
+const COLUMN_DEFAULTS = {left: 300, right: 340};
+const MIN_COLUMN = 160;    // The narrowest side column.
+const MIN_CONTENT = 320;   // The narrowest middle column.
+const SPLITTER_WIDTH = 7;  // As in style.css.
+const KEY_STEP = 16;       // How far the arrow keys move a splitter.
+
+const columns = loadColumns();
+
+function loadColumns() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(COLUMNS_KEY) || "{}");
+    return {...COLUMN_DEFAULTS, ...Object.fromEntries(Object.entries(stored || {})
+      .filter(([side, width]) => side in COLUMN_DEFAULTS && Number.isFinite(width)))};
+  } catch {
+    return {...COLUMN_DEFAULTS};
+  }
+}
+
+function saveColumns() {
+  try {
+    localStorage.setItem(COLUMNS_KEY, JSON.stringify(columns));
+  } catch {
+    // Without storage, the columns can still be resized; the widths are just not remembered.
+  }
+}
+
+// The width left for the side columns, with the middle column at its narrowest.
+const availableWidth = () => document.querySelector("main").clientWidth - 2 * SPLITTER_WIDTH - MIN_CONTENT;
+const clampWidth = (width, max) => Math.round(Math.max(MIN_COLUMN, Math.min(width, max)));
+
+// The widths the columns get in the current window: the right column first, then the left one.
+function columnWidths() {
+  const right = clampWidth(columns.right, availableWidth() - MIN_COLUMN);
+  return {left: clampWidth(columns.left, availableWidth() - right), right};
+}
+
+function applyColumns() {
+  const main = document.querySelector("main");
+  const widths = columnWidths();
+  for (const side of ["left", "right"]) {
+    main.style.setProperty(`--${side}-width`, `${widths[side]}px`);
+    const splitter = document.getElementById(`${side}-splitter`);
+    splitter.setAttribute("aria-valuenow", String(widths[side]));
+    splitter.setAttribute("aria-valuemin", String(MIN_COLUMN));
+  }
+}
+
+// Set the width of a side column, as far as the window and the other side column allow.
+function resizeColumn(side, width) {
+  const other = side === "left" ? "right" : "left";
+  const widths = columnWidths();
+  columns[other] = widths[other];
+  columns[side] = clampWidth(width, availableWidth() - widths[other]);
+  applyColumns();
+}
+
+function initSplitter(side) {
+  const splitter = document.getElementById(`${side}-splitter`);
+  // Dragging to the right widens the left column, and narrows the right one.
+  const direction = side === "left" ? 1 : -1;
+  let start = null;
+  splitter.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    start = {x: event.clientX, width: columnWidths()[side]};
+    splitter.setPointerCapture(event.pointerId);
+    splitter.classList.add("dragging");
+    document.body.classList.add("resizing");
+  });
+  splitter.addEventListener("pointermove", (event) => {
+    if (start) resizeColumn(side, start.width + direction * (event.clientX - start.x));
+  });
+  const stop = () => {
+    if (!start) return;
+    start = null;
+    splitter.classList.remove("dragging");
+    document.body.classList.remove("resizing");
+    saveColumns();
+  };
+  splitter.addEventListener("pointerup", stop);
+  splitter.addEventListener("pointercancel", stop);
+  splitter.addEventListener("lostpointercapture", stop);
+  splitter.addEventListener("dblclick", () => { resizeColumn(side, COLUMN_DEFAULTS[side]); saveColumns(); });
+  splitter.addEventListener("keydown", (event) => {
+    const steps = {ArrowLeft: -1, ArrowRight: 1}[event.key];
+    if (steps === undefined) return;
+    event.preventDefault();
+    resizeColumn(side, columnWidths()[side] + direction * steps * KEY_STEP);
+    saveColumns();
+  });
+}
+
 // --- Start -------------------------------------------------------------------------------------------------
+
+initSplitter("left");
+initSplitter("right");
+applyColumns();
+window.addEventListener("resize", applyColumns);
 
 // Expanding all opens everything; collapsing all leaves the groups open, showing the top-level elements.
 document.getElementById("expand-all").addEventListener("click", () => setCollapsed([...parentKeys(), ...groupKeys()], false));
