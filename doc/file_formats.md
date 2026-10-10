@@ -36,8 +36,9 @@ my-model/
     └── ...
 ```
 
+* `archtool init` creates a repository for a meta model, with an empty table for every type and diagram type, and the `.gitattributes` below.
 * `model/<type>.csv` contains all elements of `<type>`. Elements of a type that extends `<type>` are stored in the table of their own type.
-* A table is created when the first element of its type is created. It is never deleted while its type exists, even when it has no more rows, because it records the highest identifier number ever used (see [@last_number](#the-last_number-line)).
+* A table that does not exist yet, e.g. for a type added to the meta model later, is created when the first element of its type is created. A table is never deleted while its type exists, even when it has no more rows, because it records the highest identifier number ever used (see [@last_number](#the-last_number-line)).
 * `diagrams/<diagram_type>.csv` is the index table of a diagram type. Each diagram listed in it has a file `diagrams/<diagram_id>.diag`.
 * Abstraction levels have no files in the concrete model.
 

@@ -30,7 +30,7 @@ In this document, a *type* always means a meta-model element, and an *element* a
 * **CLI tools, model library and collaboration server:** Python for the MVP. When the design crystallises and stable binary distributions are wanted, they are ported to Rust.
 * **Web clients:** free choice; for the MVP, plain JavaScript without a build step. The web clients talk to the server through a language-neutral protocol (JSON over WebSocket), so their technology does not affect the rest of the system.
 
-All tools are subcommands of a single executable, `archtool`, e.g. `archtool check`, `archtool edit`, `archtool render` and `archtool serve`.
+All tools are subcommands of a single executable, `archtool`, e.g. `archtool init`, `archtool check`, `archtool edit`, `archtool render` and `archtool serve`.
 There is one thing to install, while each subcommand still performs a single task.
 
 To keep the later port to Rust straightforward:
@@ -90,6 +90,7 @@ The model library is the heart of the system.
 
 | Vision task | Component | Interface |
 |---|---|---|
+| Starting a model for a meta model | Repository initialiser | CLI |
 | Checking the validity of the model | Model checker | CLI |
 | Checking traceability and coverage | Model checker (verification rules) | CLI |
 | Generating diagrams | Diagram generator | CLI |
@@ -100,6 +101,8 @@ The model library is the heart of the system.
 | Viewing and editing the hierarchy | Web client (hierarchy view) on the editing engine | Web |
 | Drawing diagrams | Web client (diagram editor) on the editing engine | Web |
 | Generating identifiers centrally | Collaboration server | Web API |
+
+**Repository initialiser.** Creates a model repository for a meta model (`archtool init`): the settings, a copy of the meta model or a reference to it, an empty table for every type and diagram type, and the git settings the file formats need. It refuses a meta model with errors, and a directory that already holds a repository.
 
 **Model checker.** Checks the concrete model against the meta model (allowed types, containment, ports, connections, references that resolve, duplicate identifiers) and evaluates the verification rules, such as coverage rules. It reports findings in a machine-readable and a human-readable form, and returns a non-zero exit code on errors, so it can be used in CI.
 

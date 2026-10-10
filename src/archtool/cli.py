@@ -12,6 +12,7 @@ from archtool.diagrams.render import RenderError, Renderer
 from archtool.editing.editor import Editor
 from archtool.errors import FormatError
 from archtool.identifiers import identifier_key
+from archtool.init import InitError, init_repository
 from archtool.language.runtime import RuleError, Runner, load_rules
 from archtool.repository import load_repository
 from archtool.server.app import serve
@@ -20,6 +21,19 @@ from archtool.server.app import serve
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="archtool", description="Tools to build, check and render architecture models.")
     commands = parser.add_subparsers(dest="command", required=True, metavar="command")
+    init = commands.add_parser(
+        "init",
+        help="create a model repository for a meta model",
+        description="Create a model repository for a meta model: the settings, a copy of the meta model, an empty "
+        "table for every type and diagram type, and .gitattributes and .gitignore files if there are none. Writes a "
+        "JSON line for every file created. Nothing is created if the meta model has errors, or if the directory "
+        "already contains a repository.",
+    )
+    init.add_argument("metamodel", type=Path, help="the meta-model file")
+    init.add_argument("repository", nargs="?", type=Path, default=Path("."),
+                      help="the directory of the new repository, created if needed (default: .)")  # fmt: skip
+    init.add_argument("--link", action="store_true",
+                      help="refer to the meta model where it is, instead of copying it into the repository")  # fmt: skip
     check = commands.add_parser(
         "check",
         help="check a model against its meta model",
@@ -64,6 +78,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     serve.add_argument("--host", help="the address to listen on")
     serve.add_argument("--port", type=int, help="the port to listen on")
     arguments = parser.parse_args(argv)
+    if arguments.command == "init":
+        return run_init(arguments.metamodel, arguments.repository, arguments.link, sys.stdout, sys.stderr)
     if arguments.command == "serve":
         return run_serve(arguments.repository, arguments.host, arguments.port, sys.stderr)
     if arguments.command == "edit":
@@ -79,6 +95,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     if arguments.command == "query":
         return run_query(arguments.repository, arguments.query, arguments.arguments, sys.stdout, sys.stderr)
     raise AssertionError(f"unknown command {arguments.command}")
+
+
+def run_init(metamodel: Path, root: Path, link: bool, output: TextIO, errors: TextIO) -> int:
+    """Create a model repository, and write the files created to `output`. Returns the exit status."""
+    try:
+        created = init_repository(root, metamodel, link=link)
+    except FormatError as error:
+        errors.write(f"{error.path}:{error.line}:{error.column}: {error.message}\n")
+        return 1
+    except InitError as error:
+        errors.write(f"{error}\n")
+        return 1
+    for path in created:
+        output.write(json.dumps({"file": (root / path).as_posix()}) + "\n")
+    return 0
 
 
 def run_check(root: Path, output: TextIO) -> int:
