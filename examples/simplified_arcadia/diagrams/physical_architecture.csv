@@ -1,3 +1,4 @@
-@last_number 1
+@last_number 2
 id:id;name:str
 physical_architecture_1;Coffee machine components
+physical_architecture_2;Boiler internals

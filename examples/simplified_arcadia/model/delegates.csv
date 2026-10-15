@@ -1,0 +1,4 @@
+@last_number 2
+id:id;start:ref(component_port);end:ref(component_port);name:str
+delegates_1;component_port_3;component_port_5;
+delegates_2;component_port_7;component_port_8;

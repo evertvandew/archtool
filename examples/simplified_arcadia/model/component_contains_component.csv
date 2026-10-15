@@ -1,5 +1,7 @@
-@last_number 3
+@last_number 5
 id:id;parent:ref(component);child:ref(component);name:str
 component_contains_component_1;component_1;component_2;
 component_contains_component_2;component_1;component_3;
 component_contains_component_3;component_1;component_4;
+component_contains_component_4;component_3;component_5;
+component_contains_component_5;component_3;component_6;

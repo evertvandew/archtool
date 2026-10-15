@@ -79,12 +79,15 @@ async def test_model_snapshot(client: Client) -> None:
     shown = ["functional_exchange_2", "functional_exchange_3", "logical_function_2", "logical_function_3", "logical_function_4"]
     assert diagram == {
         "id": "logical_dataflow_2", "type": "logical_dataflow", "label": "Heating and brewing", "kind": "BlockDiagram",
-        "generated": False, "shown": shown,
+        "generated": False, "generate": None, "shown": shown,
         # The elements in the diagram include the ports that its lines use.
         "elements": ["function_port_3", "function_port_4", "function_port_5", "function_port_6", *shown],
     }  # fmt: skip
     # For a generated diagram, the elements follow from its generation rule.
     mission = next(d for d in model["diagrams"] if d["id"] == "mission_1")
+    assert mission["generate"] == {"rule": "mission", "arguments": {}}
+    physical = next(d for d in model["diagrams"] if d["id"] == "physical_architecture_1")
+    assert physical["generate"] == {"rule": "component_internals", "arguments": {"root": "component_1", "depth": "1"}}
     assert mission["elements"] == ["actor_1", "involves_1", "system_function_2"]
     # An element appears in a generated diagram if it passes the diagram's generation rule.
     allocation = next(d for d in model["diagrams"] if d["id"] == "allocation_1")

@@ -1,4 +1,5 @@
-@last_number 2
+@last_number 3
 id:id;start:ref(component_port);end:ref(component_port);name:str;protocol:str
 component_exchange_1;component_port_1;component_port_2;Pump control;PWM
 component_exchange_2;component_port_3;component_port_4;Sensor signal;Analogue, 0-5 V
+component_exchange_3;component_port_6;component_port_7;Heater control;Relay, 230 V

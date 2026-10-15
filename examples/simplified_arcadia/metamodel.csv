@@ -27,6 +27,7 @@ component_port;;[component,actor];A port through which a component or actor comm
 name:ident;extends:ref(relationship_types);start:list(ref(entity_types|port_types));end:list(ref(entity_types|port_types));description:text
 functional_exchange;;[function_port];[function_port];Data passed from one function to another.
 component_exchange;;[component_port];[component_port];A physical connection between components.
+delegates;;[component_port];[component_port];A port of a component, passed on to a port of one of its parts: how the part connects to the outside.
 allocated_to;;[logical_function];[component];The component that performs a logical function.
 involves;;[actor];[system_function];An actor taking part in a system function.
 satisfies;;[system_function];[requirement];A system function satisfying a requirement.
@@ -58,7 +59,7 @@ requirement_breakdown;breakdown;[requirement];[requirement_contains_requirement]
 requirement_traceability;block;[requirement,test,system_function];[satisfies,covers];;[traceability];The functions and tests related to a requirement.
 logical_dataflow;block;[logical_function,function_port];[functional_exchange];[functional_chain];[logical_dataflow];The leaf logical functions and the data they exchange.
 functional_sequence;sequence;[logical_function];[functional_exchange];[functional_chain];;A scenario of functional exchanges between logical functions.
-physical_architecture;block;[component,component_port];[component_exchange,component_contains_component];;[component_internals];The components of the system and their connections.
+physical_architecture;block;[component,component_port];[component_exchange,delegates,component_contains_component];;[component_internals];The components of the system and their connections.
 allocation;block;[component,logical_function];[allocated_to,component_contains_component];;[allocation];The logical functions allocated to components.
 
 @table abstraction_levels
@@ -101,6 +102,7 @@ mission;system_function;use_case;;
 ;allocated_to;;none;open_arrow
 ;satisfies;;none;open_arrow
 ;covers;;none;open_arrow
+;delegates;;none;open_arrow
 ;Relationship_breakdown;;none;none
 function_breakdown;function_contains_function;;none;none
 requirement_breakdown;requirement_contains_requirement;;none;none
@@ -139,8 +141,10 @@ diagram logical_dataflow:
 diagram component_internals(root: component, depth: int = 1):
     let blocks = root.descendants(depth)
     show root
+    show root.ports
     show blocks
     show component_exchange between blocks
+    show delegates between (root union blocks)
 
 diagram allocation(root: component):
     let blocks = root union root.descendants
@@ -170,6 +174,11 @@ check logical_function_allocated (warning):
     for each f in logical_function where children is empty:
         require count(f.targets(allocated_to)) = 1
         otherwise "Leaf logical function {f} must be allocated to exactly one component."
+
+check delegation_to_part (error):
+    for each d in delegates:
+        require d.end.owner in d.start.owner.children
+        otherwise "Delegation {d} must go from a port of a component to a port of one of its parts."
 
 check port_direction (error):
     for each e in functional_exchange:
@@ -207,6 +216,7 @@ query untested_high_priority_requirements:
 .Relationship > .line { stroke: #333333; stroke-width: 1px; fill: none; }
 .functional_exchange > .line { stroke: #2e8b57; stroke-width: 2px; }
 .component_exchange > .line { stroke: #4a7ea4; stroke-width: 2px; }
+.delegates > .line { stroke: #4a7ea4; stroke-width: 1px; stroke-dasharray: 6 3; }
 .allocated_to > .line, .satisfies > .line, .covers > .line { stroke-dasharray: 4 3; }
 .Relationship_breakdown > .line { stroke: #888888; stroke-dasharray: 2 2; }
 .highlighted > .line { stroke: #d2691e; stroke-width: 3px; }

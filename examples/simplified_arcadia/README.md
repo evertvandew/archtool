@@ -16,7 +16,7 @@ It serves as:
 |---|---|---|
 | `system_level` | `actor`, `requirement`, `test`, `system_function` | `mission` (use case), `function_breakdown` and `requirement_breakdown` (breakdown), `requirement_traceability` (block) |
 | `logical_level` | `logical_function`, `function_port`, `functional_exchange`, `functional_chain` | `logical_dataflow` (block), `functional_sequence` (sequence) |
-| `physical_level` | `component`, `component_port`, `component_exchange` | `physical_architecture` (block), `allocation` (block) |
+| `physical_level` | `component`, `component_port`, `component_exchange`, `delegates` | `physical_architecture` (block), `allocation` (block) |
 
 The levels are connected by relationships:
 
@@ -24,6 +24,8 @@ The levels are connected by relationships:
 * `allocated_to`: a logical function is allocated to a component;
 * `exchange_allocation`: a functional exchange is carried by a component exchange (a relationship breakdown);
 * `satisfies` and `covers`: system functions satisfy requirements, and tests cover them.
+
+Within the physical level, `delegates` passes a port of a component on to a port of one of its parts, which shows how a part connects to the outside of the component that contains it.
 
 Functions, components and requirements can be broken down into more detailed ones. Requirements are only checked for coverage and satisfaction when they are not broken down further.
 
@@ -34,6 +36,6 @@ The meta model also contains generation rules for all diagram types except the s
 A coffee machine, in [`model/`](model) and [`diagrams/`](diagrams):
 
 * The user selects a drink (`system_function_2`), after which the machine heats water (`system_function_3`) and brews (`system_function_4`).
-* Four logical functions realise these, and are allocated to three components: a controller, a boiler and a pump unit.
+* Four logical functions realise these, and are allocated to three components: a controller, a boiler and a pump unit. The boiler consists of a heating element and a temperature sensor, to which its ports are delegated.
 * Requirements: brewing coffee, broken down into choosing the strength and the cup size; the brewing time; and a design constraint on materials. The design constraint is verified by inspection, so it is not expected to be covered by a test; the others are verified by tests.
 * The diagrams include generated diagrams, such as the breakdown of "Brew coffee" and an overview of all requirements, a drawn block diagram that highlights a functional chain, and a drawn sequence diagram.

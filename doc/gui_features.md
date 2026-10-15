@@ -15,7 +15,7 @@ Every change the client makes is a command of the editing engine (see "Command i
 | Connection status | The header shows whether the client is connecting, connected or disconnected, with the version of the model it shows. | I |
 | Reconnecting | When the WebSocket closes, pending commands fail, the status says "disconnected — reconnecting…", and the client reconnects every 2 seconds. | I |
 | Live updates | When the server reports that the model changed (by this client or another one), the client fetches `/api/model` again and redraws the explorer, findings and content; a selection or view whose element was deleted is cleared. | I |
-| Shareable links | The URL hash holds the id of the selected element or diagram (e.g. `/#component_2`); opening such a link selects it once the model is loaded. | I |
+| Shareable links | The URL hash holds the id of the selected element or diagram (e.g. `/#component_2`), or a generated view that is not stored as `#view:<diagram type>:<rule>:<element>`; opening such a link selects it once the model is loaded. | I |
 
 ## Model explorer
 
@@ -59,10 +59,12 @@ Every change the client makes is a command of the editing engine (see "Command i
 |---|---|---|
 | Diagram list | All diagrams with their label and type; clicking one opens it; the open diagram is highlighted. | I |
 | New diagram | A collapsible form with a diagram type, a name and an optional generation rule (e.g. `mission`), which adds the diagram (`add <type> name="…" generate="…"`) and opens it. | I |
-| Diagram view | The diagram's label, id, type and whether it is generated or drawn, and the SVG rendered by the server (`/api/diagrams/<id>.svg`), scaled to the width of the view; rendering errors are shown as a notice. | I |
+| Diagram view | The diagram's label, id, type and whether it is generated or drawn (or, for a generated view that is not stored, the element and diagram type), and the SVG rendered by the server (`/api/diagrams/<id>.svg` or `/api/preview.svg`), scaled to the width of the view; rendering errors are shown as a notice. | I |
 | Selecting in a diagram | Clicking an element in the diagram highlights it and shows a panel with its label and id and an Open button that selects the element; the element is also revealed in the explorer. | I |
 | Show element | For drawn diagrams other than sequence diagrams: a select of the elements of the diagram type's entity and relationship types that are not shown yet, and a Show button (`show <diagram> <element>`). | I |
 | Hide element | For drawn diagrams: the selection panel has a "Hide from diagram" button for elements shown in it (`hide <diagram> <element>`). | I |
+| Open subsystem | Double-clicking a block whose element has parts (shown with a zoom-in cursor), or selecting it and clicking "Open subsystem" in the selection panel, opens a diagram of the same kind showing its parts: a stored diagram generated with the element as the parameter of a rule with one required parameter (preferring the current diagram type), or else such a generated view, which is not stored; the element whose parts are already shown has no subsystem. | I |
+| Up to the parent | A diagram about an element (the value of the one required parameter of its generation rule, e.g. the root of a subsystem) whose element has a parent shows an "↑ Up to <parent>" button in its title, which opens the subsystem of that parent, as "Open subsystem" would. | I |
 | Add chain | For drawn sequence diagrams: a select of the chains of the diagram type's chain types, and an Add button (`add_chain <diagram> <chain>`). | I |
 | Delete diagram | A Delete diagram button asks for confirmation, then sends `delete <id>`. | I |
 

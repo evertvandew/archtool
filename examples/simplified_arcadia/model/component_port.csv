@@ -1,6 +1,10 @@
-@last_number 4
+@last_number 8
 id:id;owner:ref(component|actor);name:str
 component_port_1;component_2;Pump control
 component_port_2;component_4;Pump control
 component_port_3;component_3;Sensor
 component_port_4;component_2;Sensor
+component_port_5;component_6;Sensor
+component_port_6;component_2;Heater control
+component_port_7;component_3;Heater control
+component_port_8;component_5;Power

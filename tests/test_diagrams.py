@@ -48,13 +48,29 @@ def test_block_diagram_content(runner: Runner) -> None:
     assert result.parents == {"component_2": "component_1", "component_3": "component_1", "component_4": "component_1"}
     assert result.children(None) == ["component_1"]
     assert result.ports == {
-        "component_2": ["component_port_1", "component_port_4"],
-        "component_3": ["component_port_3"],
+        "component_2": ["component_port_1", "component_port_4", "component_port_6"],
+        "component_3": ["component_port_3", "component_port_7"],
         "component_4": ["component_port_2"],
     }
     assert result.lines == [
         Line("component_exchange_1", "component_port_1", "component_port_2"),
         Line("component_exchange_2", "component_port_3", "component_port_4"),
+        Line("component_exchange_3", "component_port_6", "component_port_7"),
+    ]
+
+
+def test_subsystem_content(runner: Runner) -> None:
+    """The internals of the Boiler: its parts, its own ports on its edge, and the delegations to the parts' ports."""
+    result = content(runner, "physical_architecture_2")
+    assert result.blocks == ["component_3", "component_5", "component_6"]
+    assert result.ports == {
+        "component_3": ["component_port_3", "component_port_7"],
+        "component_5": ["component_port_8"],
+        "component_6": ["component_port_5"],
+    }
+    assert result.lines == [
+        Line("delegates_1", "component_port_3", "component_port_5"),
+        Line("delegates_2", "component_port_7", "component_port_8"),
     ]
 
 
@@ -124,9 +140,10 @@ def test_elk_graph(runner: Runner) -> None:
     assert isinstance(children, list) and len(children) == 1
     root = children[0]
     assert root["id"] == "component_1"
+    pump = next(child for child in root["children"] if child["id"] == "component_4")
+    assert (pump["width"], pump["height"]) == (160.0, 80.0)  # The size hint.
     controller = next(child for child in root["children"] if child["id"] == "component_2")
-    assert (controller["width"], controller["height"]) == (160.0, 100.0)  # The size hint.
-    assert [port["id"] for port in controller["ports"]] == ["component_port_1", "component_port_4"]
+    assert [port["id"] for port in controller["ports"]] == ["component_port_1", "component_port_4", "component_port_6"]
     assert graph["edges"][0] == {  # type: ignore[index]
         "id": "component_exchange_1#0", "sources": ["component_port_1"], "targets": ["component_port_2"],
         "labels": [{"text": "Pump control", "width": 84.0, "height": 15.0}],
@@ -315,12 +332,12 @@ def test_rendered_position_hint(repository: Repository, elk: list[str]) -> None:
     svg = Renderer(repository, elk).render("physical_architecture_1")
     root = ElementTree.fromstring(svg)
     rects = {g.get("data-id"): g.find(f"{SVG}rect") for g in root.iter(f"{SVG}g") if g.get("data-id")}
-    machine, controller = rects["component_1"], rects["component_2"]
-    assert machine is not None and controller is not None
-    # `layout component_2 at 330,110 size 160x100`
-    assert float(controller.get("x", 0)) - float(machine.get("x", 0)) == 330
-    assert float(controller.get("y", 0)) - float(machine.get("y", 0)) == 110
-    assert (controller.get("width"), controller.get("height")) == ("160", "100")
+    machine, pump = rects["component_1"], rects["component_4"]
+    assert machine is not None and pump is not None
+    # `layout component_4 at 860,90 size 160x80`
+    assert float(pump.get("x", 0)) - float(machine.get("x", 0)) == 860
+    assert float(pump.get("y", 0)) - float(machine.get("y", 0)) == 90
+    assert (pump.get("width"), pump.get("height")) == ("160", "80")
 
 
 def test_negative_positions_are_moved_into_view() -> None:

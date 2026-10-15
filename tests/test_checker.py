@@ -101,12 +101,12 @@ def test_hierarchy_cycle(example: Path) -> None:
     change(
         example,
         "model/component_contains_component.csv",
-        "@last_number 3\n",
-        "@last_number 4\n",
+        "@last_number 5\n",
+        "@last_number 6\n",
     )
     path = example / "model" / "component_contains_component.csv"
-    path.write_text(path.read_text() + "component_contains_component_4;component_2;component_1;\n")
-    assert ("hierarchy", "component_contains_component_4", "component_1 is its own ancestor") in findings(example)
+    path.write_text(path.read_text() + "component_contains_component_6;component_2;component_1;\n")
+    assert ("hierarchy", "component_contains_component_6", "component_1 is its own ancestor") in findings(example)
 
 
 TEMPLATES = """\

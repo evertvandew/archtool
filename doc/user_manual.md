@@ -376,7 +376,7 @@ Open the address the server prints in a browser. The page has three columns:
 * **Left:** the model explorer, with the entities as a tree that can be searched, collapsed and expanded, a form to add elements, and the list of diagrams with a form to add one.
 * **Middle:** the selected element or diagram.
   * For an element: a form to edit its attributes, its place in the hierarchy, its parts, ports and relationships with forms to add them, the elements it refers to, the diagrams it appears in, and generated views of it, such as its breakdown.
-  * For a diagram: the rendered diagram, in which elements can be selected by clicking them, with controls to show, hide and open elements, or to add chains to a sequence diagram.
+  * For a diagram: the rendered diagram, in which elements can be selected by clicking them, with controls to show, hide and open elements, or to add chains to a sequence diagram. Double-clicking a block that has parts opens its subsystem, a diagram of its parts, as in Simulink; an "Up" button returns to the subsystem of its parent.
 * **Right:** the findings of the checker, which link to the elements they concern, and a console in which any `archtool edit` command can be typed, with a log of the results of all commands of the client.
 
 The address in the browser's address bar includes the selected element or diagram (e.g. `/#component_2`), so it can be shared with others who use the same server.

@@ -1,6 +1,8 @@
-@last_number 4
+@last_number 6
 id:id;name:str
 component_1;Coffee machine
 component_2;Controller
 component_3;Boiler
 component_4;Pump unit
+component_5;Heating element
+component_6;Temperature sensor

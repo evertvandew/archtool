@@ -46,7 +46,7 @@ form.stacked { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0
 
 .tree ul, .list { list-style: none; margin: 0; padding: 0; }
 .tree ul ul { padding-left: 0.9rem; }
-.tree details > summary { cursor: pointer; color: var(--muted); font-size: 0.85rem; margin-top: 0.3rem; }
+.tree details > summary { cursor: pointer; color: var(--muted); font-size: 1.2rem; margin-top: 0.3rem; }
 .tree .row { display: flex; align-items: center; }
 .tree .row .item { flex: 1; min-width: 0; }
 .tree .toggle { flex: none; width: 1.2rem; padding: 0; border: none; background: none; color: var(--muted); text-align: center; }
@@ -69,6 +69,7 @@ form.stacked { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0
 
 .title { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
 .title h2 { font-size: 1.4rem; text-transform: none; color: inherit; margin: 0; }
+.title .up { margin-left: auto; }
 .id { font-family: ui-monospace, monospace; color: var(--muted); }
 .fields { display: grid; grid-template-columns: max-content 1fr; gap: 0.4rem 0.8rem; align-items: center; max-width: 720px; }
 .fields label { color: var(--muted); }
@@ -84,6 +85,8 @@ form.stacked { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0
 .diagram-view { border: 1px solid var(--border); border-radius: 4px; overflow: auto; padding: 0.5rem; background: #fff; }
 .diagram-view svg { display: block; max-width: 100%; height: auto; }
 .diagram-view [data-id] { cursor: pointer; }
+/* Blocks whose parts can be opened by double-clicking them. */
+.diagram-view .has-subsystem { cursor: zoom-in; }
 .diagram-view .selected > .shape, .diagram-view .selected > .line { stroke: var(--accent) !important; stroke-width: 3px !important; }
 
 .console { margin-top: auto; }

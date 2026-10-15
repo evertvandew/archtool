@@ -109,7 +109,7 @@ def test_navigation_syntax() -> None:
         ("system_function_1.descendants(1)", ["system_function_2", "system_function_3", "system_function_4"]),
         ("system_function_3.ancestors", ["system_function_1"]),
         ("system_function_3.parent", ["system_function_1"]),
-        ("component_2.ports", ["component_port_1", "component_port_4"]),
+        ("component_2.ports", ["component_port_1", "component_port_4", "component_port_6"]),
         ("component_port_1.owner", ["component_2"]),
         ("logical_function_2.outgoing(functional_exchange)", ["functional_exchange_3"]),
         ("logical_function_2.incoming(functional_exchange)", ["functional_exchange_2"]),
@@ -161,7 +161,12 @@ def test_generation_rules(runner: Runner) -> None:
     ]  # fmt: skip
     shown = runner.generate("component_internals", (("root", "component_1"),))
     assert sorted(shown) == [
-        "component_1", "component_2", "component_3", "component_4", "component_exchange_1", "component_exchange_2",
+        "component_1", "component_2", "component_3", "component_4",
+        "component_exchange_1", "component_exchange_2", "component_exchange_3",
+    ]  # fmt: skip
+    # A subsystem shows the ports of its root, and how they are delegated to its parts.
+    assert sorted(runner.generate("component_internals", (("root", "component_3"),))) == [
+        "component_3", "component_5", "component_6", "component_port_3", "component_port_7", "delegates_1", "delegates_2",
     ]  # fmt: skip
     assert "depth" in str(runner.rules.program.diagrams["function_breakdown"].parameters)
 
@@ -264,6 +269,20 @@ def test_broken_down_requirements_are_not_checked(example: Path) -> None:
     assert check_repository(load_repository(example)) == []
 
 
+def test_delegation_must_go_to_a_part(example: Path) -> None:
+    """The Boiler's sensor port is passed on to the sensor inside it; passing it on to the Controller's port is wrong,
+    as the Controller is not a part of the Boiler."""
+    delegates = example / "model" / "delegates.csv"
+    delegates.write_text(delegates.read_text().replace("delegates_1;component_port_3;component_port_5", "delegates_1;component_port_3;component_port_4"))
+    findings = check_repository(load_repository(example))
+    assert [(f.severity.value, f.check, f.element, f.message) for f in findings] == [
+        (
+            "error", "delegation_to_part", "delegates_1",
+            "Delegation delegates_1 must go from a port of a component to a port of one of its parts.",
+        )
+    ]  # fmt: skip
+
+
 def test_checker_reports_rule_errors(example: Path) -> None:
     metamodel = example / "metamodel.csv"
     metamodel.write_text(metamodel.read_text().replace("for each r in requirement where", "for each r in requirment where"))
@@ -277,7 +296,9 @@ def test_checker_reports_rule_errors(example: Path) -> None:
 def test_cli_query() -> None:
     output, errors = io.StringIO(), io.StringIO()
     assert run_query(SIMPLIFIED_ARCADIA, "component_1.descendants", [], output, errors) == 0
-    assert [json.loads(line)["id"] for line in output.getvalue().splitlines()] == ["component_2", "component_3", "component_4"]
+    assert [json.loads(line)["id"] for line in output.getvalue().splitlines()] == [
+        "component_2", "component_3", "component_4", "component_5", "component_6",
+    ]  # fmt: skip
     output = io.StringIO()
     assert run_query(SIMPLIFIED_ARCADIA, "unallocated_functions", [], output, errors) == 0
     assert output.getvalue() == ""

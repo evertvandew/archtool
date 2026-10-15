@@ -1,0 +1,3 @@
+@diagram physical_architecture_2 : physical_architecture
+generate component_internals(root=component_3)
+@end

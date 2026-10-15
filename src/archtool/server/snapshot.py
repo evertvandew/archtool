@@ -44,6 +44,7 @@ def snapshot(model: Model, rules: Rules, findings: list[Finding], version: int) 
             "label": runner.default_label(identifier),
             "kind": metamodel.types[diagram.type].stereotype.value,
             "generated": any(isinstance(s, Generate) for s in diagram.statements),
+            "generate": _generate(diagram),
             "shown": [s.element for s in diagram.statements if isinstance(s, Show)],
             "elements": _diagram_elements(runner, diagram),
         }
@@ -57,6 +58,14 @@ def snapshot(model: Model, rules: Rules, findings: list[Finding], version: int) 
         "diagrams": diagrams,
         "findings": [finding.to_json() for finding in findings],
     }
+
+
+def _generate(diagram: DiagramFile) -> Json | None:
+    """The generation rule of a generated diagram, with its arguments as written; None for a drawn diagram."""
+    for statement in diagram.statements:
+        if isinstance(statement, Generate):
+            return {"rule": statement.rule, "arguments": dict(statement.arguments)}
+    return None
 
 
 def _diagram_elements(runner: Runner, diagram: DiagramFile) -> list[str]:

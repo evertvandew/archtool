@@ -73,7 +73,7 @@ async function refresh() {
   setStatus(socket && socket.readyState === WebSocket.OPEN ? "connected" : "connecting…",
             socket && socket.readyState === WebSocket.OPEN ? "connected" : "");
   if (state.selected && !state.model.elements[state.selected]) state.selected = null;
-  if (state.view && state.view.kind === "element" && !state.model.elements[state.view.id]) state.view = null;
+  if (state.view && ["element", "view"].includes(state.view.kind) && !state.model.elements[state.view.id]) state.view = null;
   if (state.view && state.view.kind === "diagram" && !state.model.diagrams.some((d) => d.id === state.view.id)) {
     state.view = null;
   }
@@ -292,7 +292,9 @@ function renderContent({keepForm}) {
     return;
   }
   if (state.view.kind === "diagram") {
-    renderDiagram(content, state.view.id);
+    renderDiagram(content, storedDiagram(state.view.id));
+  } else if (state.view.kind === "view") {
+    renderDiagram(content, generatedView(state.view));
   } else if (keepForm) {
     // Keep the unsaved edits, but tell the user that the model changed.
     if (!content.querySelector(".notice")) {
@@ -584,26 +586,105 @@ function openDiagram(diagramId, elementId) {
 
 // --- Diagrams ----------------------------------------------------------------------------------------------
 
-async function renderDiagram(content, id) {
+// A diagram is shown from a description: a stored diagram, or a generated view of an element that is not stored
+// (`state.view.kind === "view"`), such as the internals of a subsystem.
+function storedDiagram(id) {
   const diagram = state.model.diagrams.find((d) => d.id === id);
+  return {...diagram, stored: true, url: `/api/diagrams/${encodeURIComponent(id)}.svg?version=${state.model.version}`,
+          description: `${diagram.type} · ${diagram.generated ? "generated" : "drawn"}`};
+}
+
+function generatedView(view) {
+  const query = new URLSearchParams({type: view.diagramType, rule: view.rule, [view.parameter]: view.id,
+                                     version: String(state.model.version)});
+  return {id: viewKey(view), type: view.diagramType, label: label(view.id), kind: types()[view.diagramType].stereotype,
+          generated: true, stored: false, shown: [], generate: {rule: view.rule, arguments: {[view.parameter]: view.id}},
+          url: `/api/preview.svg?${query}`, description: `${view.diagramType} of ${view.id} · generated view, not stored`};
+}
+
+// Generated views are kept in the URL as `#view:<diagram type>:<rule>:<element>`.
+const viewKey = (view) => `view:${view.diagramType}:${view.rule}:${view.id}`;
+const currentKey = () => (!state.view ? null : state.view.kind === "view" ? viewKey(state.view) : state.view.id);
+
+function parseViewKey(text) {
+  const [prefix, diagramType, rule, id, ...rest] = text.split(":");
+  if (prefix !== "view" || rest.length || !element(id)) return null;
+  const found = viewOptions(id).find((o) => o.diagramType === diagramType && o.rule === rule);
+  return found ? {kind: "view", id, diagramType, rule, parameter: found.parameter} : null;
+}
+
+function openView(view) {
+  state.view = view;
+  state.selected = null;
+  state.dirty = false;
+  if (location.hash !== `#${viewKey(view)}`) history.replaceState(null, "", `#${viewKey(view)}`);
+  renderSidebar();
+  renderContent({});
+}
+
+// The subsystem of an element in a diagram: a diagram of the same kind that shows the element's parts. A stored
+// diagram generated for the element is preferred, as it may have layout hints; otherwise it is a generated view.
+// Elements without parts have no subsystem, and neither has the element whose subsystem is already shown.
+function subsystem(diagram, id) {
+  if (!element(id) || !Object.values(elements()).some((e) => e.parent === id)) return null;
+  const options = viewOptions(id).filter((o) => o.kind === diagram.kind)
+    .sort((a, b) => (b.diagramType === diagram.type) - (a.diagramType === diagram.type));
+  const generates = (d, o) => d.generate && d.type === o.diagramType && d.generate.rule === o.rule
+    && d.generate.arguments[o.parameter] === id;
+  for (const o of options) {
+    const stored = state.model.diagrams.find((d) => generates(d, o));
+    if (stored) return stored.id === diagram.id ? null : {kind: "diagram", id: stored.id};
+  }
+  if (!options.length || generates(diagram, options[0])) return null;
+  return {kind: "view", id, diagramType: options[0].diagramType, rule: options[0].rule, parameter: options[0].parameter};
+}
+
+// The element a diagram is about: the value of the one required parameter of its generation rule, if that is an
+// element, e.g. the component whose parts a subsystem shows.
+function diagramSubject(diagram) {
+  if (!diagram.generate) return null;
+  const rule = state.model.rules[diagram.generate.rule];
+  const required = rule ? rule.parameters.filter((p) => p.default === null) : [];
+  const value = required.length === 1 ? diagram.generate.arguments[required[0].name] : undefined;
+  return value && element(value) ? value : null;
+}
+
+// Up from a subsystem: the subsystem of the parent of the element it is about.
+function upTarget(diagram) {
+  const subject = diagramSubject(diagram);
+  const parent = subject ? element(subject).parent : null;
+  const target = parent && element(parent) ? subsystem(diagram, parent) : null;
+  return target ? {target, parent} : null;
+}
+
+function openSubsystem(target) {
+  if (target.kind === "diagram") select(target.id);
+  else openView(target);
+}
+
+async function renderDiagram(content, diagram) {
   const kind = diagram.kind;
   const container = el("div", {className: "diagram-view"}, el("p", {className: "muted"}, "Rendering…"));
+  const up = upTarget(diagram);
   const parts = [
-    el("div", {className: "title"}, el("h2", {}, diagram.label), el("span", {className: "id"}, id),
-       el("span", {className: "muted"}, `${diagram.type} · ${diagram.generated ? "generated" : "drawn"}`)),
+    el("div", {className: "title"}, el("h2", {}, diagram.label),
+       diagram.stored ? el("span", {className: "id"}, diagram.id) : null,
+       el("span", {className: "muted"}, diagram.description),
+       up ? el("button", {className: "up", onclick: () => openSubsystem(up.target),
+                          title: `Open the subsystem of ${label(up.parent)}`}, `↑ Up to ${label(up.parent)}`) : null),
     container,
     el("div", {id: "diagram-selection", className: "actions"}),
   ];
-  if (!diagram.generated && kind === "SequenceDiagram") {
+  if (diagram.stored && !diagram.generated && kind === "SequenceDiagram") {
     const chains = elementsOf(property(diagram.type, "chains"));
     if (chains.length) {
       const chainSelect = el("select", {"aria-label": "Chain"}, chains.map((c) => option(c, `${label(c)} (${c})`)));
       parts.push(el("form", {className: "actions", onsubmit: (event) => {
           event.preventDefault();
-          send(`add_chain ${id} ${chainSelect.value}`);
+          send(`add_chain ${diagram.id} ${chainSelect.value}`);
         }}, "Add chain", chainSelect, el("button", {type: "submit"}, "Add")));
     }
-  } else if (!diagram.generated) {
+  } else if (diagram.stored && !diagram.generated) {
     const allowed = [...property(diagram.type, "entities"), ...property(diagram.type, "relationships")];
     const candidates = elementsOf(allowed).filter((c) => !diagram.shown.includes(c));
     if (candidates.length) {
@@ -611,21 +692,22 @@ async function renderDiagram(content, id) {
         candidates.map((c) => option(c, `${label(c)} (${element(c).type})`)));
       parts.push(el("form", {className: "actions", onsubmit: (event) => {
           event.preventDefault();
-          send(`show ${id} ${elementSelect.value}`);
+          send(`show ${diagram.id} ${elementSelect.value}`);
         }}, "Show", elementSelect, el("button", {type: "submit"}, "Show")));
     }
   }
-  parts.push(el("div", {className: "actions"},
-    el("button", {className: "danger", onclick: async () => {
-      if (!confirm(`Delete the diagram ${diagram.label} (${id})?`)) return;
-      const result = await send(`delete ${id}`);
-      if (result.ok) { state.view = null; state.selected = null; }
-    }}, "Delete diagram")));
+  if (diagram.stored) {
+    parts.push(el("div", {className: "actions"},
+      el("button", {className: "danger", onclick: async () => {
+        if (!confirm(`Delete the diagram ${diagram.label} (${diagram.id})?`)) return;
+        const result = await send(`delete ${diagram.id}`);
+        if (result.ok) { state.view = null; state.selected = null; }
+      }}, "Delete diagram")));
+  }
   content.replaceChildren(...parts);
 
-  const version = state.model.version;
-  const response = await fetch(`/api/diagrams/${encodeURIComponent(id)}.svg?version=${version}`);
-  if (!state.view || state.view.id !== id) return;  // Another view was chosen meanwhile.
+  const response = await fetch(diagram.url);
+  if (currentKey() !== diagram.id) return;  // Another view was chosen meanwhile.
   if (!response.ok) {
     const body = await response.json().catch(() => ({error: response.statusText}));
     container.replaceChildren(el("p", {className: "notice"}, `The diagram cannot be rendered: ${body.error}`));
@@ -634,12 +716,22 @@ async function renderDiagram(content, id) {
   // The SVG comes from the server's renderer, which escapes all text in it.
   container.innerHTML = await response.text();
   for (const group of container.querySelectorAll("[data-id]")) {
+    const id = group.dataset.id;
     group.addEventListener("click", (event) => {
       event.stopPropagation();
-      selectInDiagram(diagram, group.dataset.id);
+      selectInDiagram(diagram, id);
+    });
+    // Double-clicking a block with parts opens its subsystem; the first click of it has selected the block.
+    if (!subsystem(diagram, id)) continue;
+    group.classList.add("has-subsystem");
+    group.addEventListener("dblclick", (event) => {
+      event.stopPropagation();
+      getSelection().removeAllRanges();
+      const target = subsystem(diagram, id);
+      if (target) openSubsystem(target);
     });
   }
-  if (state.selected && state.selected !== id) selectInDiagram(diagram, state.selected);
+  if (state.selected && state.selected !== diagram.id) selectInDiagram(diagram, state.selected);
 }
 
 function selectInDiagram(diagram, id) {
@@ -651,7 +743,12 @@ function selectInDiagram(diagram, id) {
   if (!panel || !element(id)) return;
   const actions = [el("span", {}, "Selected: ", el("strong", {}, label(id)), " ", el("span", {className: "id"}, id)),
                    el("button", {onclick: () => select(id)}, "Open")];
-  if (!diagram.generated && diagram.shown.includes(id)) {
+  const target = subsystem(diagram, id);
+  if (target) {
+    actions.push(el("button", {onclick: () => openSubsystem(target), title: "Show the parts of this element"},
+                    "Open subsystem"));
+  }
+  if (diagram.stored && !diagram.generated && diagram.shown.includes(id)) {
     actions.push(el("button", {onclick: () => send(`hide ${diagram.id} ${id}`)}, "Hide from diagram"));
   }
   panel.replaceChildren(...actions);
@@ -827,6 +924,8 @@ document.getElementById("new-diagram").addEventListener("submit", async (event) 
 
 refresh().then(() => {
   const id = decodeURIComponent(location.hash.slice(1));
-  if (id && element(id)) select(id);
+  const view = parseViewKey(id);
+  if (view) openView(view);
+  else if (id && element(id)) select(id);
   connect();
 });
