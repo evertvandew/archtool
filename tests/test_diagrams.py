@@ -10,7 +10,7 @@ from archtool.cli import run_render
 from archtool.diagrams.content import DiagramContent, Line, SequenceEvent, diagram_content
 from archtool.diagrams.elk import attach_inner_lines, elk_command, elk_graph, elk_layout, read_layout
 from archtool.diagrams.geometry import Box, Geometry, Path as GeometryPath, PlacedLabel
-from archtool.diagrams.hints import apply_position_hints
+from archtool.diagrams.hints import Point, _orthogonal_route, _simplify, apply_position_hints
 from archtool.diagrams.presentation import Presentation
 from archtool.diagrams.render import RenderError, Renderer
 from archtool.diagrams.sequence import sequence_layout
@@ -403,6 +403,33 @@ def test_rerouting_with_ports_on_the_border() -> None:
     result = apply_position_hints(geometry, content, {"b_1": Layout("b_1", 240, 80)}, orthogonal=True)
     path = next(p for p in result.paths if p.element == "e_1")
     p_1, p_2 = boxes(result)["p_1"], boxes(result)["p_2"]
-    # From the outer (right) side of p_1 to the outer (bottom) side of p_2.
-    assert path.points[0] == (p_1[0] + 10, p_1[1] + 5)
+    # From the outer (right) side of p_1, leaving to the right, to the outer (bottom) side of p_2, arriving from below.
+    assert path.points[0] == (p_1[0] + 10, p_1[1] + 5) and path.points[1][0] > path.points[0][0]
     assert path.points[-1] == (p_2[0] + 5, p_2[1] + 10)
+    assert path.points[-2][0] == p_2[0] + 5 and path.points[-2][1] > path.points[-1][1]
+
+
+RIGHT, LEFT, UP, DOWN = (1.0, 0.0), (-1.0, 0.0), (0.0, -1.0), (0.0, 1.0)
+
+
+@pytest.mark.parametrize(
+    ("a", "da", "b", "db", "expected"),
+    [
+        # Facing each other horizontally: a Z, or straight if they are level.
+        ((0, 0), RIGHT, (100, 50), LEFT, ((0, 0), (50, 0), (50, 50), (100, 50))),
+        ((0, 0), RIGHT, (100, 0), LEFT, ((0, 0), (100, 0))),
+        # Facing each other vertically: a Z.
+        ((0, 0), DOWN, (100, 100), UP, ((0, 0), (0, 50), (100, 50), (100, 100))),
+        # From the right side of a block to the top of a block below and to the right of it: one bend.
+        ((0, 0), RIGHT, (100, 50), UP, ((0, 0), (100, 0), (100, 50))),
+        # To the bottom of a block below and to the right: out of both ends first, then round.
+        ((0, 0), RIGHT, (100, 50), DOWN, ((0, 0), (12, 0), (12, 62), (100, 62), (100, 50))),
+        # Ports facing away from each other: out of both, and through the middle.
+        ((0, 0), LEFT, (100, 50), RIGHT, ((0, 0), (-12, 0), (-12, 25), (112, 25), (112, 50), (100, 50))),
+    ],
+)
+def test_orthogonal_routes(a: Point, da: Point, b: Point, db: Point, expected: tuple[Point, ...]) -> None:
+    route = _simplify(_orthogonal_route(a, da, b, db))
+    assert route == expected
+    # Every segment is horizontal or vertical.
+    assert all(p[0] == q[0] or p[1] == q[1] for p, q in zip(route, route[1:]))

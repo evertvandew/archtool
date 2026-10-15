@@ -7,7 +7,8 @@ ELK's layout:
    diagram), with its contents and ports.
 2. Enclosing blocks grow where needed to keep containing their contents; ports on their right or bottom edge move
    with that edge.
-3. Lines attached to anything that moved are rerouted: orthogonally in block diagrams, straight in other diagrams.
+3. Lines attached to anything that moved are rerouted: orthogonally in block diagrams, leaving each port away from
+   its block, and straight in other diagrams.
    Their labels are placed by the renderer instead of ELK.
 
 Everything else keeps the layout computed by ELK. Size hints are passed to ELK itself (see archtool.diagrams.elk).
@@ -21,6 +22,8 @@ from archtool.diagrams.geometry import CONTAINER_LABEL_HEIGHT, Box, Geometry, Pa
 from archtool.formats.diagram_file import Layout
 
 MARGIN = 12.0
+# How far a rerouted line runs straight out of a port before it turns, when it cannot turn straight away.
+STUB = 12.0
 
 type Point = tuple[float, float]
 
@@ -144,13 +147,62 @@ def _follow_edge(port: Box, old: Box, new: Box) -> Box:
 def _route(start: Box, end: Box, boxes: Mapping[str, Box], owners: Mapping[str, str], orthogonal: bool) -> tuple[Point, ...]:
     a = _attachment(start, _centre(end), boxes, owners)
     b = _attachment(end, _centre(start), boxes, owners)
-    if not orthogonal or abs(a[1] - b[1]) < 0.5 or abs(a[0] - b[0]) < 0.5:
+    if not orthogonal:
         return (a, b)
-    if _vertical_side(start, boxes, owners):
-        middle = (a[1] + b[1]) / 2
+    return _simplify(_orthogonal_route(a, _direction(start, a), b, _direction(end, b)))
+
+
+def _orthogonal_route(a: Point, da: Point, b: Point, db: Point) -> tuple[Point, ...]:
+    """An orthogonal line from `a` to `b`, which leaves `a` in direction `da`, and arrives at `b` from direction `db`
+    (pointing away from `b`): with one bend if the ends point at each other on different axes, a Z if they do on the
+    same axis, and otherwise first straight out of both ends."""
+    horizontal = da[1] == 0, db[1] == 0
+    a2, b2 = (a[0] + da[0] * STUB, a[1] + da[1] * STUB), (b[0] + db[0] * STUB, b[1] + db[1] * STUB)
+    if horizontal[0] != horizontal[1]:
+        corner = (b[0], a[1]) if horizontal[0] else (a[0], b[1])
+        if _ahead(a, corner, da) and _ahead(b, corner, db):
+            return (a, corner, b)
+        return (a, a2, (a2[0], b2[1]) if horizontal[0] else (b2[0], a2[1]), b2, b)
+    if horizontal[0]:
+        middle = (a[0] + b[0]) / 2
+        if _ahead(a, (middle, a[1]), da) and _ahead(b, (middle, b[1]), db):
+            return (a, (middle, a[1]), (middle, b[1]), b)
+        middle = (a2[1] + b2[1]) / 2
+        return (a, a2, (a2[0], middle), (b2[0], middle), b2, b)
+    middle = (a[1] + b[1]) / 2
+    if _ahead(a, (a[0], middle), da) and _ahead(b, (b[0], middle), db):
         return (a, (a[0], middle), (b[0], middle), b)
-    middle = (a[0] + b[0]) / 2
-    return (a, (middle, a[1]), (middle, b[1]), b)
+    middle = (a2[0] + b2[0]) / 2
+    return (a, a2, (middle, a2[1]), (middle, b2[1]), b2, b)
+
+
+def _ahead(point: Point, other: Point, direction: Point) -> bool:
+    """Whether `other` lies ahead of `point`, in `direction`."""
+    return (other[0] - point[0]) * direction[0] + (other[1] - point[1]) * direction[1] > 0.5
+
+
+def _direction(box: Box, point: Point) -> Point:
+    """The direction in which a line leaves a block or port at `point`, on its outline: outwards."""
+    if abs(point[0] - box.x) < 0.5:
+        return (-1.0, 0.0)
+    if abs(point[0] - (box.x + box.width)) < 0.5:
+        return (1.0, 0.0)
+    return (0.0, -1.0) if abs(point[1] - box.y) < 0.5 else (0.0, 1.0)
+
+
+def _simplify(points: tuple[Point, ...]) -> tuple[Point, ...]:
+    """The same line without repeated points, and without points in the middle of a straight segment."""
+    result: list[Point] = []
+    for point in points:
+        if result and abs(point[0] - result[-1][0]) < 0.5 and abs(point[1] - result[-1][1]) < 0.5:
+            continue
+        if len(result) >= 2:
+            (x0, y0), (x1, y1) = result[-2], result[-1]
+            if (abs(x0 - x1) < 0.5 and abs(x1 - point[0]) < 0.5) or (abs(y0 - y1) < 0.5 and abs(y1 - point[1]) < 0.5):
+                result[-1] = point
+                continue
+        result.append(point)
+    return tuple(result)
 
 
 def _centre(box: Box) -> Point:
@@ -181,14 +233,6 @@ def port_side(port: Box, owner: Box) -> str:
         "top": abs(cy - owner.y), "bottom": abs(cy - (owner.y + owner.height)),
     }  # fmt: skip
     return min(distances, key=lambda side: distances[side])
-
-
-def _vertical_side(box: Box, boxes: Mapping[str, Box], owners: Mapping[str, str]) -> bool:
-    """Whether a line leaves a port vertically: from a port on the top or bottom side of its block."""
-    owner = boxes.get(owners.get(box.element, ""))
-    if box.kind != "port" or owner is None:
-        return False
-    return port_side(box, owner) in ("top", "bottom")
 
 
 def fit(geometry: Geometry) -> Geometry:
