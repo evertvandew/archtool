@@ -24,7 +24,7 @@ from archtool.diagrams.geometry import (
     PlacedLabel,
     text_size,
 )
-from archtool.diagrams.hints import apply_position_hints, fit
+from archtool.diagrams.hints import apply_position_hints, fit, port_side
 from archtool.diagrams.presentation import Presentation
 from archtool.formats.diagram_file import Layout
 from archtool.metamodel import Stereotype
@@ -55,8 +55,40 @@ def elk_layout(
     geometry = read_layout(run_elk(graph, command))
     if any(hint.element in content.blocks for hint in hints.values()):
         geometry = apply_position_hints(geometry, content, hints, orthogonal=content.stereotype is Stereotype.BLOCK_DIAGRAM)
+    geometry = attach_inner_lines(geometry, content)
     # ELK's tree layout can report a graph narrower than its nodes when it places several trees side by side.
     return fit(geometry)
+
+
+def attach_inner_lines(geometry: Geometry, content: DiagramContent) -> Geometry:
+    """Let lines that go into a block from one of its ports start at the inner side of the port.
+
+    Ports straddle the border of their block. Lines are attached to the outer side of a port, which is right for
+    lines to the outside, but makes a line to the block's contents, such as a delegation to a part, cross the port.
+    """
+    boxes = {box.element: box for box in geometry.boxes}
+    owners = {port: block for block, ports in content.ports.items() for port in ports}
+    lines = {line.element: line for line in content.lines}
+    paths = []
+    for path in geometry.paths:
+        line = lines.get(path.element)
+        points = list(path.points)
+        if line is not None and len(points) >= 2:
+            for end, index, neighbour in ((line.start, 0, 1), (line.end, -1, -2)):
+                port, owner = boxes.get(end), boxes.get(owners.get(end, ""))
+                if port is None or owner is None:
+                    continue
+                (x, y), (nx, ny) = points[index], points[neighbour]
+                if not (owner.x < nx < owner.x + owner.width and owner.y < ny < owner.y + owner.height):
+                    continue  # The line goes to the outside.
+                side = port_side(port, owner)
+                # Only the end segment, which is perpendicular to the side, moves; the line stays orthogonal.
+                if side in ("left", "right") and abs(y - ny) < 0.5:
+                    points[index] = (port.x + port.width if side == "left" else port.x, y)
+                elif side in ("top", "bottom") and abs(x - nx) < 0.5:
+                    points[index] = (x, port.y + port.height if side == "top" else port.y)
+        paths.append(Path(path.element, path.kind, tuple(points)))
+    return Geometry(geometry.width, geometry.height, geometry.boxes, paths, geometry.labels)
 
 
 def elk_graph(content: DiagramContent, presentation: Presentation, hints: Mapping[str, Layout]) -> _Json:
@@ -106,7 +138,10 @@ def elk_graph(content: DiagramContent, presentation: Presentation, hints: Mappin
         ports = content.ports.get(block, [])
         if ports:
             result["ports"] = [
-                {"id": port, "width": PORT_SIZE, "height": PORT_SIZE, "labels": elk_labels(port)} for port in ports
+                # Ports straddle the border of their block: half inside, half outside.
+                {"id": port, "width": PORT_SIZE, "height": PORT_SIZE, "labels": elk_labels(port),
+                 "layoutOptions": {"elk.port.borderOffset": str(-PORT_SIZE / 2)}}
+                for port in ports
             ]
             options = result.setdefault("layoutOptions", {})
             assert isinstance(options, dict)

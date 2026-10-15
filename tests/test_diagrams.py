@@ -8,7 +8,7 @@ import pytest
 
 from archtool.cli import run_render
 from archtool.diagrams.content import DiagramContent, Line, SequenceEvent, diagram_content
-from archtool.diagrams.elk import elk_command, elk_graph, elk_layout, read_layout
+from archtool.diagrams.elk import attach_inner_lines, elk_command, elk_graph, elk_layout, read_layout
 from archtool.diagrams.geometry import Box, Geometry, Path as GeometryPath, PlacedLabel
 from archtool.diagrams.hints import apply_position_hints
 from archtool.diagrams.presentation import Presentation
@@ -368,3 +368,41 @@ def test_breakdown_of_several_trees(runner: Runner, elk: list[str]) -> None:
     assert blocks["requirement_1"][1] == blocks["requirement_2"][1] == blocks["requirement_3"][1]
     # The diagram is as large as its contents, although ELK reports a smaller graph for a forest.
     assert all(x + w <= geometry.width and y + h <= geometry.height for x, y, w, h in blocks.values())
+
+
+def test_ports_straddle_the_border(runner: Runner) -> None:
+    diagram = runner.model.diagrams["physical_architecture_2"]
+    graph = elk_graph(diagram_content(runner, diagram), Presentation(runner, diagram.type), {})
+    boiler = graph["children"][0]  # type: ignore[index]
+    assert [port["layoutOptions"]["elk.port.borderOffset"] for port in boiler["ports"]] == ["-5.0", "-5.0"]
+
+
+def test_lines_into_a_block_start_at_the_inner_side_of_its_port() -> None:
+    """A delegation from port `p_1` of container `c_1` to port `p_2` of its part `a_1`, and a line from `p_1` to the
+    outside: ELK attaches both to the outer side of `p_1`."""
+    content = DiagramContent("d_1", "d", Stereotype.BLOCK_DIAGRAM, blocks=["c_1", "a_1", "o_1"], parents={"a_1": "c_1"},
+                             ports={"c_1": ["p_1"], "a_1": ["p_2"], "o_1": ["p_3"]},
+                             lines=[Line("d_1", "p_1", "p_2"), Line("e_1", "p_3", "p_1")])  # fmt: skip
+    geometry = Geometry(
+        400, 200,
+        boxes=[Box("c_1", "block", 100, 10, 200, 120, container=True), Box("p_1", "port", 95, 60, 10, 10),
+               Box("a_1", "block", 150, 40, 100, 50), Box("p_2", "port", 145, 60, 10, 10),
+               Box("o_1", "block", 0, 40, 50, 50), Box("p_3", "port", 45, 60, 10, 10)],
+        paths=[GeometryPath("d_1", "line", ((95, 65), (145, 65))), GeometryPath("e_1", "line", ((55, 65), (95, 65)))],
+        labels=[],
+    )  # fmt: skip
+    result = attach_inner_lines(geometry, content)
+    assert [path.points for path in result.paths] == [((105, 65), (145, 65)), ((55, 65), (95, 65))]
+
+
+def test_rerouting_with_ports_on_the_border() -> None:
+    """Ports straddling the border of their block are on the side nearest to their centre."""
+    content, geometry = hinted_layout()
+    geometry.boxes[2] = Box("p_1", "port", 125, 70, 10, 10)  # On the right side of a_1.
+    geometry.boxes[4] = Box("p_2", "port", 295, 95, 10, 10)  # On the bottom side of b_1.
+    result = apply_position_hints(geometry, content, {"b_1": Layout("b_1", 240, 80)}, orthogonal=True)
+    path = next(p for p in result.paths if p.element == "e_1")
+    p_1, p_2 = boxes(result)["p_1"], boxes(result)["p_2"]
+    # From the outer (right) side of p_1 to the outer (bottom) side of p_2.
+    assert path.points[0] == (p_1[0] + 10, p_1[1] + 5)
+    assert path.points[-1] == (p_2[0] + 5, p_2[1] + 10)

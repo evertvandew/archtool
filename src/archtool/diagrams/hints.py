@@ -163,17 +163,24 @@ def _attachment(box: Box, towards: Point, boxes: Mapping[str, Box], owners: Mapp
     cx, cy = _centre(box)
     owner = boxes.get(owners.get(box.element, ""))
     if box.kind == "port" and owner is not None:
-        if box.x + box.width <= owner.x + 1:
-            return box.x, cy
-        if box.x >= owner.x + owner.width - 1:
-            return box.x + box.width, cy
-        if box.y + box.height <= owner.y + 1:
-            return cx, box.y
-        return cx, box.y + box.height
+        return {
+            "left": (box.x, cy), "right": (box.x + box.width, cy), "top": (cx, box.y), "bottom": (cx, box.y + box.height),
+        }[port_side(box, owner)]  # fmt: skip
     dx, dy = towards[0] - cx, towards[1] - cy
     if abs(dx) * box.height >= abs(dy) * box.width:
         return (box.x + box.width if dx > 0 else box.x), cy
     return cx, (box.y + box.height if dy > 0 else box.y)
+
+
+def port_side(port: Box, owner: Box) -> str:
+    """The side of its block a port is on: the side nearest to its centre. Ports straddle that side, or lie outside
+    it."""
+    cx, cy = _centre(port)
+    distances = {
+        "left": abs(cx - owner.x), "right": abs(cx - (owner.x + owner.width)),
+        "top": abs(cy - owner.y), "bottom": abs(cy - (owner.y + owner.height)),
+    }  # fmt: skip
+    return min(distances, key=lambda side: distances[side])
 
 
 def _vertical_side(box: Box, boxes: Mapping[str, Box], owners: Mapping[str, str]) -> bool:
@@ -181,7 +188,7 @@ def _vertical_side(box: Box, boxes: Mapping[str, Box], owners: Mapping[str, str]
     owner = boxes.get(owners.get(box.element, ""))
     if box.kind != "port" or owner is None:
         return False
-    return box.x + box.width > owner.x + 1 and box.x < owner.x + owner.width - 1
+    return port_side(box, owner) in ("top", "bottom")
 
 
 def fit(geometry: Geometry) -> Geometry:
