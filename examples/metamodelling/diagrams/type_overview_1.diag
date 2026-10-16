@@ -1,0 +1,3 @@
+@diagram type_overview_1 : type_overview
+generate type_overview
+@end

@@ -1,0 +1,4 @@
+@last_number 2
+id:id;name:str;description:text
+relationship_type_1;flow;A signal, material or energy flowing from one port to another.
+relationship_type_2;satisfies;A block satisfying a requirement.

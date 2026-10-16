@@ -1,0 +1,247 @@
+# Metamodelling: a meta model for defining meta models
+#
+# The elements of a model made with this meta model describe another meta
+# model: the types of a modelling method, with their attributes, labels and
+# shapes, its diagram types, abstraction levels and rules. The script
+# generate_metamodel.py turns such a model into a meta-model file, which can
+# be used to start a model repository with `archtool init`.
+#
+# The links between types are relationships, so that they can be drawn and
+# checked; attributes, labels and shapes are parts of the type they belong to.
+
+@table entity_types
+name:ident;extends:ref(entity_types);description:text
+metamodel;;The meta model being defined: its name, description, stylesheet and SVG definitions. A model holds at most one.
+classifier;;Something that attributes, labels and shapes can be defined for: a type, or a stereotype of the core model.
+stereotype;classifier;A stereotype of the core model, such as Entity or Relationship, named as in the core model. Attributes, labels and shapes defined for a stereotype apply to all types with that stereotype.
+model_type;classifier;A type of the meta model. Its name is used in identifiers and rules: lowercase letters, digits and underscores.
+entity_type;model_type;A type of entities: the things being modelled.
+port_type;model_type;A type of ports, through which entities are connected.
+relationship_type;model_type;A type of relationships between entities or ports.
+refinement_type;relationship_type;A type of relationships between entities at different abstraction levels, e.g. a function realising another.
+hierarchy_type;model_type;A type of hierarchy relationships, by which entities are broken down into parts.
+breakdown_type;model_type;A type of relationship breakdowns: relationships carried by other relationships.
+chain_type;model_type;A type of chains: sequences of relationships, e.g. scenarios.
+template_type;model_type;A type of templates, which define parameters for their instantiations.
+instantiation_type;model_type;A type of instantiations of a template type.
+diagram_type;model_type;A type of diagrams.
+attribute;;An attribute of the elements of a type or stereotype.
+type_label;;A text shown for the elements of a type or stereotype.
+type_shape;;The shape of the blocks, or the endings of the lines, of the elements of a type or stereotype.
+rule;;A rule in the selection language: a definition, generation rule, verification rule or query.
+abstraction_level;;An abstraction level, which groups diagram types.
+
+@table relationship_types
+name:ident;extends:ref(relationship_types);start:list(ref(entity_types|port_types));end:list(ref(entity_types|port_types));description:text
+extends;;[model_type];[model_type];A type that extends another type of the same kind, and inherits its attributes.
+owned_by;;[port_type];[entity_type,template_type,instantiation_type];The types of entities that ports of a type can belong to.
+starts_at;;[relationship_type];[entity_type,port_type,template_type,instantiation_type];The types that relationships of a type can start at.
+ends_at;;[relationship_type];[entity_type,port_type,template_type,instantiation_type];The types that relationships of a type can end at.
+has_parent;;[hierarchy_type];[entity_type,template_type,instantiation_type];The type of the parents in a hierarchy type.
+has_child;;[hierarchy_type];[entity_type,template_type,instantiation_type];The type of the children in a hierarchy type.
+has_aggregate;;[breakdown_type];[relationship_type];The relationship type whose relationships carry others, in a breakdown type.
+has_constituent;;[breakdown_type];[relationship_type];The relationship type whose relationships are carried, in a breakdown type.
+chain_of;;[chain_type];[relationship_type];The relationship type of which the chains of a chain type consist.
+instantiates;;[instantiation_type];[template_type];The template type whose templates an instantiation type instantiates.
+shows;;[diagram_type];[entity_type,port_type,relationship_type,hierarchy_type,breakdown_type,template_type,instantiation_type];The types whose elements diagrams of a type can show.
+highlights;;[diagram_type];[chain_type];The chain types whose chains diagrams of a type can highlight, or, for a sequence diagram type, show.
+uses_rule;;[diagram_type];[rule];The generation rules that diagrams of a type can use.
+includes;;[abstraction_level];[diagram_type];The diagram types of an abstraction level.
+
+@table hierarchy_types
+name:ident;parent:ref(entity_types);child:ref(entity_types);description:text
+classifier_has_attribute;classifier;attribute;The attributes defined for a type or stereotype.
+classifier_has_label;classifier;type_label;The labels defined for a type or stereotype.
+classifier_has_shape;classifier;type_shape;The shapes defined for a type or stereotype.
+
+@table diagram_types
+name:ident;kind:enum(block|sequence|breakdown|use_case);entities:list(ref(entity_types|port_types));relationships:list(ref(any_type));chains:list(ref(chain_types));rules:list(ident);description:text
+type_overview;block;[model_type];[extends,owned_by,starts_at,ends_at,has_parent,has_child,has_aggregate,has_constituent,chain_of,instantiates];;[type_overview];The types of the meta model, and how they are related.
+type_details;breakdown;[classifier,attribute,type_label,type_shape];[classifier_has_attribute,classifier_has_label,classifier_has_shape];;[type_details];A type or stereotype, with its attributes, labels and shapes.
+diagram_contents;block;[model_type,rule];[shows,highlights,uses_rule];;[diagram_contents];What the diagrams of a type show, and the rules that generate them.
+
+@table abstraction_levels
+name:ident;diagrams:list(ref(diagram_types));description:text
+definition;[type_overview,type_details,diagram_contents];Defining a meta model.
+
+@table attributes
+type:ref(any_type);name:ident;datatype:datatype;required:bool;default:str;description:text
+Entity;name;str;false;;The name of the element. For a type or stereotype, the name it has in the meta model.
+metamodel;description;text;false;;What the meta model is for, written as a comment at the top of the meta-model file.
+metamodel;style;text;false;;The stylesheet of the diagrams, in CSS, as in the @style section of a meta-model file.
+metamodel;defs;text;false;;SVG definitions, such as gradients and markers, as in the @defs section of a meta-model file.
+classifier;description;text;false;;What the type or stereotype means.
+diagram_type;kind;enum(block|sequence|breakdown|use_case);true;;The kind of diagram, which determines its layout.
+attribute;datatype;str;true;;The data type, e.g. str, text, int, float, bool, enum(high|low), ref(component) or list(ref(component)).
+attribute;required;bool;false;false;Whether every element of the type must have a value.
+attribute;default;str;false;;The default value, as written in a table cell. A required attribute has none.
+attribute;description;text;false;;What the attribute means.
+type_label;text;str;true;;The text to show, with {…} inserting the value of an expression, e.g. {name}.
+type_label;anchor;enum(top_left|top|top_right|left|centre|right|bottom_left|bottom|bottom_right|start|middle|end|outside|inside);false;;Where the text is placed: for blocks top_left to bottom_right, for lines start, middle or end, for ports outside or inside.
+type_label;in_diagram;ref(diagram_type);false;;The diagram type in which the label is shown. Without one, it is the default label of the elements, used outside diagrams and in diagram types without labels of their own.
+type_shape;block_shape;str;false;;The shape of blocks, e.g. rectangle or note, or #name for a symbol in the SVG definitions.
+type_shape;line_start;str;false;;The ending at the start of lines, e.g. none or filled_diamond.
+type_shape;line_end;str;false;;The ending at the end of lines, e.g. arrow or open_arrow.
+type_shape;in_diagram;ref(diagram_type);false;;The diagram type in which the shape is used. Without one, it is used in all diagram types.
+rule;text;text;true;;The rule in the selection language, starting with define, diagram, check or query and its name, e.g. "diagram mission:". The name of the element is only shown in the tools.
+abstraction_level;description;text;false;;What the abstraction level describes.
+
+@table labels
+diagram_type:ref(diagram_types);type:ref(any_type);text:str;anchor:ident
+;Entity;{name};
+;type_label;{text};
+;type_shape;shape of {parent.name};
+type_overview;model_type;{name};top
+type_overview;model_type;«{type}»;top_left
+type_details;attribute;{name}: {datatype};
+diagram_contents;model_type;{name};top
+diagram_contents;model_type;«{type}»;top_left
+type_overview;Relationship;{type};middle
+diagram_contents;Relationship;{type};middle
+
+@table shapes
+diagram_type:ref(diagram_types);type:ref(any_type);shape:str;start:str;end:str
+;Entity;rectangle;;
+;Relationship;;none;arrow
+;HierarchyRelationship;;none;none
+;stereotype;rounded_rectangle;;
+;rule;document;;
+;type_label;note;;
+;extends;;none;open_triangle
+;uses_rule;;none;open_arrow
+
+@rules
+# Generation rules
+
+diagram type_overview:
+    let types = model_type except diagram_type
+    show types
+    show extends between types
+    show owned_by between types
+    show starts_at between types
+    show ends_at between types
+    show has_parent between types
+    show has_child between types
+    show has_aggregate between types
+    show has_constituent between types
+    show chain_of between types
+    show instantiates between types
+
+diagram type_details(root: classifier):
+    show root
+    show root.children
+
+diagram diagram_contents(root: diagram_type):
+    show root
+    show root.targets(shows)
+    show root.targets(highlights)
+    show root.targets(uses_rule)
+    show shows from root
+    show highlights from root
+    show uses_rule from root
+
+# Verification rules: what the meta-model file needs, so that the errors are found while modelling.
+
+check single_metamodel (error):
+    for each m in metamodel:
+        require count(metamodel) = 1
+        otherwise "A model can only define one meta model, but {m} is one of {count(metamodel)}."
+
+check type_name (error):
+    for each t in model_type:
+        require t.name matches "^[a-z][a-z0-9_]*$"
+        otherwise "Type {t} needs a name of lowercase letters, digits and underscores, starting with a letter."
+
+check stereotype_name (error):
+    for each s in stereotype:
+        require s.name matches "^(Entity|Port|Relationship|Refinement|HierarchyRelationship|Relationship_breakdown|Chain|TemplateEntity|InstantiationEntity|Diagram|BlockDiagram|SequenceDiagram|BreakDownDiagram|UseCaseDiagram)$"
+        otherwise "Stereotype {s} must have the name of a stereotype of the core model, such as Entity."
+
+check attribute_name (error):
+    for each a in attribute:
+        require a.name matches "^[a-z][a-z0-9_]*$"
+        otherwise "Attribute {a} needs a name of lowercase letters, digits and underscores, starting with a letter."
+
+check part_of_a_classifier (error):
+    for each p in (attribute union type_label union type_shape):
+        require p.parent is not empty
+        otherwise "{p} must be part of the type or stereotype it belongs to."
+
+check extends_one_type (error):
+    for each t in model_type:
+        require count(t.targets(extends)) <= 1
+        otherwise "Type {t} can extend only one type."
+
+check extends_same_kind (error):
+    for each t in model_type where targets(extends) is not empty:
+        require t.targets(extends).type = t.type
+        otherwise "Type {t} can only extend a type of the same kind."
+
+check port_type_owner (error):
+    for each p in port_type:
+        require p.targets(owned_by) is not empty
+        otherwise "Port type {p} needs the types of entities its ports belong to (owned_by)."
+
+check relationship_type_ends (error):
+    for each r in relationship_type:
+        require r.targets(starts_at) is not empty and r.targets(ends_at) is not empty
+        otherwise "Relationship type {r} needs the types it starts and ends at (starts_at and ends_at)."
+
+check hierarchy_type_ends (error):
+    for each h in hierarchy_type:
+        require count(h.targets(has_parent)) = 1 and count(h.targets(has_child)) = 1
+        otherwise "Hierarchy type {h} needs one parent type and one child type (has_parent and has_child)."
+
+check breakdown_type_ends (error):
+    for each b in breakdown_type:
+        require count(b.targets(has_aggregate)) = 1 and count(b.targets(has_constituent)) = 1
+        otherwise "Breakdown type {b} needs one aggregate and one constituent relationship type."
+
+check chain_type_relationship (error):
+    for each c in chain_type:
+        require count(c.targets(chain_of)) = 1
+        otherwise "Chain type {c} needs the one relationship type its chains consist of (chain_of)."
+
+check instantiation_type_template (error):
+    for each i in instantiation_type:
+        require count(i.targets(instantiates)) = 1
+        otherwise "Instantiation type {i} needs the one template type it instantiates."
+
+check template_type_instantiated_once (error):
+    for each t in template_type:
+        require count(t.sources(instantiates)) <= 1
+        otherwise "Template type {t} can have only one instantiation type."
+
+check generation_rule (error):
+    for each r in rule where sources(uses_rule) is not empty:
+        require r.text matches "^diagram "
+        otherwise "Rule {r} is used by a diagram type, so it must be a generation rule, starting with 'diagram'."
+
+check diagram_type_rules (warning):
+    for each d in diagram_type where kind != sequence:
+        require d.targets(uses_rule) is not empty
+        otherwise "Diagram type {d} has no generation rules, so its diagrams can only be drawn."
+
+# Queries
+
+query types:
+    select model_type
+    columns id, name, description
+
+query attributes_of_types:
+    select attribute
+    columns id, parent, name, datatype, required
+@end
+
+@style
+.Entity > .label { font-family: sans-serif; font-size: 12px; }
+.model_type > .shape { fill: #eef3fb; stroke: #4a6fa5; }
+.diagram_type > .shape { fill: #f3eefb; stroke: #6f4aa5; }
+.stereotype > .shape { fill: #f4f4f4; stroke: #777777; }
+.attribute > .shape { fill: #ffffff; stroke: #4a6fa5; }
+.type_label > .shape { fill: #fff8c4; stroke: #b39b2e; }
+.type_shape > .shape { fill: #e8f5e8; stroke: #3f8a3f; }
+.rule > .shape { fill: #f0f0f0; stroke: #666666; }
+.Relationship > .line { stroke: #333333; stroke-width: 1px; fill: none; }
+.uses_rule > .line, .owned_by > .line { stroke-dasharray: 4 3; }
+@end

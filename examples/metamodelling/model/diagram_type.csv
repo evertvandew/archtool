@@ -1,0 +1,5 @@
+@last_number 3
+id:id;name:str;description:text;kind:enum(block|sequence|breakdown|use_case)
+diagram_type_1;internal_block;A block with its parts, and the flows between them.;block
+diagram_type_2;requirement_tree;The breakdown of a requirement.;breakdown
+diagram_type_3;satisfaction;A requirement, and the blocks that satisfy it.;block

@@ -1,0 +1,6 @@
+@last_number 4
+id:id;name:str;text:text
+rule_1;internals;diagram internals(root: block, depth: int = 1):\n    let blocks = root.descendants(depth)\n    show root\n    show root.ports\n    show blocks\n    show flow between (root union blocks)
+rule_2;requirement_tree;diagram requirement_tree(root: requirement, depth: int = 3):\n    show root\n    show root.descendants(depth)
+rule_3;satisfaction;diagram satisfaction(root: requirement):\n    show root\n    show root.sources(satisfies)\n    show satisfies to root
+rule_4;requirement_satisfied;check requirement_satisfied (warning):\n    for each r in requirement where children is empty:\n        require r.sources(satisfies) is not empty\n        otherwise "Requirement {r} is not satisfied by any block."

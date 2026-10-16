@@ -1,0 +1,7 @@
+@last_number 5
+id:id;name:str;text:str;anchor:enum(top_left|top|top_right|left|centre|right|bottom_left|bottom|bottom_right|start|middle|end|outside|inside);in_diagram:ref(diagram_type)
+type_label_1;;{name};;
+type_label_2;;{name};top;diagram_type_1
+type_label_3;;«block»;top_left;diagram_type_1
+type_label_4;;{name};top;diagram_type_3
+type_label_5;;{text};centre;diagram_type_3

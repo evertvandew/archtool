@@ -77,7 +77,7 @@ _DIAGRAM_KINDS = {
 }
 
 # The tables of the meta-model file, with their columns, as specified in doc/file_formats.md.
-_TABLE_HEADERS = {
+TABLE_HEADERS = {
     "entity_types": "name:ident;extends:ref(entity_types);description:text",
     "port_types": "name:ident;extends:ref(port_types);owner:list(ref(entity_types));description:text",
     "relationship_types": "name:ident;extends:ref(relationship_types);start:list(ref(entity_types|port_types));"
@@ -98,7 +98,7 @@ _TABLE_HEADERS = {
     "labels": "diagram_type:ref(diagram_types);type:ref(any_type);text:str;anchor:ident",
     "shapes": "diagram_type:ref(diagram_types);type:ref(any_type);shape:str;start:str;end:str",
 }
-_TABLE_COLUMNS = {name: parse_header(header, "<specification>", 1) for name, header in _TABLE_HEADERS.items()}
+_TABLE_COLUMNS = {name: parse_header(header, "<specification>", 1) for name, header in TABLE_HEADERS.items()}
 
 # The tables that define types, with the stereotype of their types (diagram types: by kind).
 _TYPE_TABLES: dict[str, Stereotype | None] = {

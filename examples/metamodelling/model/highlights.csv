@@ -1,0 +1,3 @@
+@last_number 1
+id:id;start:ref(diagram_type);end:ref(chain_type);name:str
+highlights_1;diagram_type_1;chain_type_1;

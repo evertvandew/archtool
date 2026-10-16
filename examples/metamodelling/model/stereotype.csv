@@ -1,0 +1,5 @@
+@last_number 3
+id:id;name:str;description:text
+stereotype_1;Entity;Every element.
+stereotype_2;Relationship;Every relationship.
+stereotype_3;HierarchyRelationship;Every hierarchy relationship, drawn in breakdown diagrams.

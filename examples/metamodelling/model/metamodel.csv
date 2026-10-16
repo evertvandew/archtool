@@ -1,0 +1,3 @@
+@last_number 1
+id:id;name:str;description:text;style:text;defs:text
+metamodel_1;Blocks and requirements;A small meta model for systems of blocks, connected by flows between their ports,\nand the requirements they satisfy.;.Entity > .label { font-family: sans-serif\s font-size: 12px\s }\n.block > .shape { fill: #e8f0fa\s stroke: #4a7ea4\s }\n.requirement > .shape { fill: #fff8c4\s stroke: #b39b2e\s }\n.Relationship > .line { stroke: #333333\s stroke-width: 1px\s fill: none\s }\n.flow > .line { stroke: #4a7ea4\s stroke-width: 2px\s }\n.satisfies > .line { stroke-dasharray: 4 3\s }\n.highlighted > .line { stroke: #d2691e\s stroke-width: 3px\s };

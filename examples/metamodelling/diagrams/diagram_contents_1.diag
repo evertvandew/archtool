@@ -1,0 +1,3 @@
+@diagram diagram_contents_1 : diagram_contents
+generate diagram_contents(root=diagram_type_1)
+@end

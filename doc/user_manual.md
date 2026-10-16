@@ -12,7 +12,7 @@ It assumes you know what you want to model, but not how the tools work. For the 
 * [selection_language.md](selection_language.md): the language of queries, generation rules and verification rules;
 * [gui_features.md](gui_features.md): the features of the web client.
 
-The examples use the coffee machine in [`examples/simplified_arcadia`](../examples/simplified_arcadia).
+The examples use the coffee machine in [`examples/simplified_arcadia`](../examples/simplified_arcadia). The example in [`examples/metamodelling`](../examples/metamodelling) shows how to define your own meta model.
 
 ## Concepts
 
@@ -382,6 +382,17 @@ Open the address the server prints in a browser. The page has three columns:
 The address in the browser's address bar includes the selected element or diagram (e.g. `/#component_2`), so it can be shared with others who use the same server.
 
 All features of the web client are listed in [gui_features.md](gui_features.md).
+
+## Defining your own meta model
+
+A meta model can be written by hand, following [file_formats.md](file_formats.md#meta-model-file), or modelled with the tools themselves, with the example in [`examples/metamodelling`](../examples/metamodelling):
+
+1. Start a repository with the metamodelling meta model: `archtool init examples/metamodelling/metamodel.csv my-metamodel`.
+2. Model the types of your method, with their attributes, labels and shapes, its diagram types and its rules, e.g. in the web client (`archtool serve my-metamodel`). `archtool check` reports what is missing or wrong.
+3. Generate the meta-model file: `uv run python examples/metamodelling/generate_metamodel.py my-metamodel -o my-method.csv`. It is only written if the tools can read it.
+4. Start a model with it: `archtool init my-method.csv my-model`.
+
+See the example's [README](../examples/metamodelling/README.md) for the details.
 
 ## A typical workflow
 

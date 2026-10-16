@@ -1,0 +1,3 @@
+@last_number 1
+id:id;start:ref(port_type);end:ref(entity_type|template_type|instantiation_type);name:str
+owned_by_1;port_type_1;entity_type_2;

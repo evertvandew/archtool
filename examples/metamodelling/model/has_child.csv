@@ -1,0 +1,4 @@
+@last_number 2
+id:id;start:ref(hierarchy_type);end:ref(entity_type|template_type|instantiation_type);name:str
+has_child_1;hierarchy_type_1;entity_type_2;
+has_child_2;hierarchy_type_2;entity_type_1;

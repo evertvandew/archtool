@@ -1,0 +1,11 @@
+@last_number 9
+id:id;start:ref(diagram_type);end:ref(entity_type|port_type|relationship_type|hierarchy_type|breakdown_type|template_type|instantiation_type);name:str
+shows_1;diagram_type_1;entity_type_2;
+shows_2;diagram_type_1;port_type_1;
+shows_3;diagram_type_1;relationship_type_1;
+shows_4;diagram_type_1;hierarchy_type_1;
+shows_5;diagram_type_2;entity_type_1;
+shows_6;diagram_type_2;hierarchy_type_2;
+shows_7;diagram_type_3;entity_type_1;
+shows_8;diagram_type_3;entity_type_2;
+shows_9;diagram_type_3;relationship_type_2;

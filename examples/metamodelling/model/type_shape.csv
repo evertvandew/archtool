@@ -1,0 +1,7 @@
+@last_number 5
+id:id;name:str;block_shape:str;line_start:str;line_end:str;in_diagram:ref(diagram_type)
+type_shape_1;;rectangle;;;
+type_shape_2;;;none;arrow;
+type_shape_3;;;none;none;
+type_shape_4;;note;;;
+type_shape_5;;;none;open_arrow;

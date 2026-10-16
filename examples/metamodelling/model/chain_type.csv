@@ -1,0 +1,3 @@
+@last_number 1
+id:id;name:str;description:text
+chain_type_1;flow_path;A path of flows through the system.

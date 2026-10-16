@@ -1,0 +1,3 @@
+@last_number 1
+id:id;start:ref(chain_type);end:ref(relationship_type);name:str
+chain_of_1;chain_type_1;relationship_type_1;

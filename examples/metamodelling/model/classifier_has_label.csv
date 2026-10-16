@@ -1,0 +1,7 @@
+@last_number 5
+id:id;parent:ref(classifier);child:ref(type_label);name:str
+classifier_has_label_1;stereotype_1;type_label_1;
+classifier_has_label_2;entity_type_2;type_label_2;
+classifier_has_label_3;entity_type_2;type_label_3;
+classifier_has_label_4;entity_type_1;type_label_4;
+classifier_has_label_5;entity_type_1;type_label_5;

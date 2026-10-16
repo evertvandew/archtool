@@ -1,0 +1,3 @@
+@diagram type_details_1 : type_details
+generate type_details(root=entity_type_1)
+@end
