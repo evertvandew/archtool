@@ -181,6 +181,10 @@ def test_entity_types_are_related(example: Path) -> None:
         "connect owned_by start=port_type_2 end=entity_type_6\n"
         'add relationship_type name="pipe"\nconnect belongs_to start=relationship_type_4 end=metamodel_1\n'
         "connect starts_at start=relationship_type_4 end=port_type_2\nconnect ends_at start=relationship_type_4 end=port_type_2\n"
+        # Connected by a hierarchy type only: a mode that is part of a state.
+        'add entity_type name="mode"\nconnect belongs_to start=entity_type_7 end=metamodel_2\n'
+        'add hierarchy_type name="state_contains_mode"\nconnect belongs_to start=hierarchy_type_4 end=metamodel_2\n'
+        "connect has_parent start=hierarchy_type_4 end=entity_type_3\nconnect has_child start=hierarchy_type_4 end=entity_type_7\n"
     )
     output = io.StringIO()
     assert run_edit(example, io.StringIO(commands), output, io.StringIO()) == 0, output.getvalue()
@@ -188,7 +192,7 @@ def test_entity_types_are_related(example: Path) -> None:
     assert [(f.severity.value, f.check, f.element, f.message) for f in findings] == [
         (
             "warning", "entity_type_related", "entity_type_4",
-            "Entity type event is not connected by any relationship type, directly, through its port types, "
+            "Entity type event is not connected by any relationship or hierarchy type, directly, through its port types, "
             "or through the types it extends.",
         )
     ]  # fmt: skip

@@ -192,13 +192,14 @@ check extends_same_kind (error):
         require t.targets(extends).type = t.type
         otherwise "Type {t} can only extend a type of the same kind."
 
-# The relationship types that start or end at some of `types`, or at the port types they own.
-define relationship_types_of(types: entity_type) = types.sources(starts_at) union types.sources(ends_at) union types.sources(owned_by).sources(starts_at) union types.sources(owned_by).sources(ends_at)
+# The relationship types that start or end at some of `types`, or at the port types they own, and the hierarchy types
+# that have some of `types` as parent or child.
+define connecting_types_of(types: entity_type) = types.sources(starts_at) union types.sources(ends_at) union types.sources(owned_by).sources(starts_at) union types.sources(owned_by).sources(ends_at) union types.sources(has_parent) union types.sources(has_child)
 
 check entity_type_related (warning):
     for each t in entity_type:
-        require relationship_types_of(t union t.reachable(extends)) is not empty
-        otherwise "Entity type {t} is not connected by any relationship type, directly, through its port types, or through the types it extends."
+        require connecting_types_of(t union t.reachable(extends)) is not empty
+        otherwise "Entity type {t} is not connected by any relationship or hierarchy type, directly, through its port types, or through the types it extends."
 
 check port_type_owner (error):
     for each p in port_type:
