@@ -64,6 +64,8 @@ They share the stereotypes `Entity`, `Relationship` and `HierarchyRelationship`,
    `-m` chooses the meta model, by its name or identifier; it can be left out if the model defines only one. For this example: `-m "Blocks and requirements"` or `-m "State machines"`.
 
    The file is only written if it is valid, as the tools would read it. Otherwise the script reports the errors, with the line of the generated file they are on.
+
+   In the web client, the "Meta-model file" button of a meta model downloads the same file. This example's [`archtool.toml`](archtool.toml) declares the script as an export of meta models. A repository started with `archtool init`, as in step 1, needs the same `[[exports]]` table, with the path to the script, e.g. `command = ["{python}", "/path/to/examples/metamodelling/generate_metamodel.py", "{repository}", "--metamodel", "{element}"]`.
 4. Start a model with it:
 
    ```

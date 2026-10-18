@@ -50,6 +50,7 @@ Every change the client makes is a command of the editing engine (see "Command i
 | Add connected element | A form "Add new" with a select of the entity types that a relationship type can connect to this element, in either direction (e.g. "entity_type, which belongs_to this" or "requirement, which this satisfies"), and a name, which adds a new top-level element (`add`) and connects it to this one (`connect`); if the connection fails, the new element is deleted again (`delete`), so that no unconnected element remains. | I |
 | Refers to           | The elements this element refers to through its reference columns, as "column: link". | I |
 | Appears in          | The diagrams the element appears in (shown or drawn in it, or, for generated diagrams, passing the diagram's generation rule), as links that open the diagram with the element selected. | I |
+| Export | For elements of the type of an export in `archtool.toml` (or a type that extends it): an "Export" section with a button per export, which fetches `/api/exports/<n>/<id>` and saves the file under the name the server gives (`Content-Disposition`); while the command runs it says "Making <export>…", and if it fails the error is shown as a notice. | I |
 | Generated views     | A select of the diagram types whose generation rule has exactly one required parameter, of the element's type, and a Show button that renders that view of the element through `/api/preview.svg`, without storing it in the model. | I |
 | Default breakdown   | An element with parts that has a breakdown view shows that view straight away. | I |
 | Selecting in a view | In a generated view the element itself is highlighted, and clicking another element selects that element. | I |
@@ -94,6 +95,7 @@ Defining meta models in the web client, with the meta model of [`examples/metamo
 | Type details | A type or stereotype with attributes, labels or shapes shows them straight away in the breakdown `type_details` (Default breakdown). | I |
 | Diagram type contents | On a diagram type, the generated view `diagram_contents` shows the types its diagrams show, the chain types they highlight and their generation rules (Generated views). | I |
 | Metamodelling findings | The findings list shows the metamodelling rules' findings, such as a type without a valid name, an element that belongs to no meta model, a link that crosses meta models, or an entity type that nothing connects; clicking one selects the element (Findings list, Go to finding). | I |
+| Meta-model file | On a meta model, the "Meta-model file" button downloads its meta-model file, `<name>.csv`, made by `generate_metamodel.py` (Export, with the export in the example's `archtool.toml`); if the meta model cannot be generated, e.g. because of a link to a type of another meta model, the script's reason is shown. | I |
 
 ## Command console
 

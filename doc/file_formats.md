@@ -63,6 +63,12 @@ elk = "elk"                        # Command that runs elk-cli
 [server]
 host = "127.0.0.1"
 port = 8080
+
+[[exports]]                        # A file made from an element; one table per export
+name = "Meta-model file"
+type = "metamodel"
+command = ["{python}", "generate_metamodel.py", "{repository}", "--metamodel", "{element}"]
+file = "{label}.csv"
 ```
 
 | Key | Default | Meaning |
@@ -71,6 +77,15 @@ port = 8080
 | `render.elk` | `"elk"` | Command used to run elk-cli. |
 | `server.host` | `"127.0.0.1"` | Address the collaboration server listens on. |
 | `server.port` | `8080` | Port the collaboration server listens on. |
+| `exports` | none | Exports: files that can be made from an element by a command, which the web client offers as downloads. |
+| `exports.name` | required | The name of the export, shown on its button. |
+| `exports.type` | required | The type or stereotype of the elements the export is made from; it also applies to the types that extend it. |
+| `exports.command` | required | The command, as a list of strings: the program and its arguments. It runs in the repository's directory, and writes the file to stdout; a non-zero exit status means it failed, with the reason on stderr. |
+| `exports.file` | `"{label}"` | The name of the file. Characters other than letters, digits, spaces, `.`, `_` and `-` are replaced by `_`. |
+
+In `exports.command` and `exports.file`, `{element}` is replaced by the element's identifier, `{label}` by its default label, `{repository}` by the absolute path of the repository, and `{python}` by the Python that runs the tools, so that a script can use the archtool library. Other braces are left as they are.
+
+The commands come from the repository's own settings, like `render.elk`: anyone who can serve a repository can run them, so only serve repositories you trust.
 
 `archtool.toml` is the only file not written in a custom format: it is rarely edited, and TOML is well supported in both Python and Rust.
 

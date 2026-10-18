@@ -12,12 +12,23 @@ from archtool.errors import FormatError
 from archtool.formats.diagram_file import DiagramFile, format_diagram_file, read_diagram_file
 from archtool.formats.tables import Table, format_model_table, read_model_table
 from archtool.identifiers import split_identifier
-from archtool.metamodel import MetaModel, load_metamodel
+from archtool.metamodel import MetaModel, Stereotype, load_metamodel
 from archtool.model import Element, Model
 
 SETTINGS_FILE = "archtool.toml"
+STEREOTYPE_NAMES = frozenset(stereotype.value for stereotype in Stereotype)
 MODEL_DIRECTORY = "model"
 DIAGRAM_DIRECTORY = "diagrams"
+
+
+@dataclass(frozen=True, slots=True)
+class Export:
+    """A file that can be made from an element of a type, by a command (see archtool.exports)."""
+
+    name: str
+    type: str
+    command: tuple[str, ...]
+    file: str = "{label}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -26,6 +37,7 @@ class Settings:
     elk: str = "elk"
     host: str = "127.0.0.1"
     port: int = 8080
+    exports: tuple[Export, ...] = ()
 
 
 @dataclass(slots=True)
@@ -55,13 +67,47 @@ def load_settings(root: Path) -> Settings:
         elk=str(render.get("elk", "elk")),
         host=str(server.get("host", "127.0.0.1")),
         port=int(server.get("port", 8080)),
+        exports=_exports(path, data.get("exports", [])),
     )
+
+
+def _exports(path: Path, entries: object) -> tuple[Export, ...]:
+    if not isinstance(entries, list):
+        raise FormatError(path, 1, 1, "'exports' must be a list of tables, written as [[exports]]")
+    return tuple(_export(path, number, entry) for number, entry in enumerate(entries, 1))
+
+
+def _export(path: Path, number: int, entry: object) -> Export:
+    """An `[[exports]]` table of the settings."""
+
+    def fail(message: str) -> FormatError:
+        return FormatError(path, 1, 1, f"export {number}: {message}")
+
+    if not isinstance(entry, dict):
+        raise fail("must be a table, [[exports]]")
+    unknown = set(entry) - {"name", "type", "command", "file"}
+    if unknown:
+        raise fail(f"unknown key '{sorted(unknown)[0]}'")
+    name, type_name, command, file = entry.get("name"), entry.get("type"), entry.get("command"), entry.get("file", "{label}")
+    if not isinstance(name, str) or not name:
+        raise fail("needs a name")
+    if not isinstance(type_name, str) or not type_name:
+        raise fail("needs the type of the elements it exports")
+    if not isinstance(command, list) or not command or not all(isinstance(part, str) for part in command):
+        raise fail("needs a command, as a list of strings")
+    if not isinstance(file, str) or not file:
+        raise fail("'file' must be a file name")
+    return Export(name, type_name, tuple(command), file)
 
 
 def load_repository(root: Path) -> Repository:
     """Load a model repository. Raises FormatError for the first error found."""
     settings = load_settings(root)
     metamodel = load_metamodel(root / settings.metamodel)
+    for number, export in enumerate(settings.exports, 1):
+        if export.type not in metamodel.types and export.type not in STEREOTYPE_NAMES:
+            message = f"export {number} ({export.name}): the meta model has no type or stereotype '{export.type}'"
+            raise FormatError(root / SETTINGS_FILE, 1, 1, message)
     repository = Repository(root, settings, metamodel, Model(metamodel))
     model_directory = root / MODEL_DIRECTORY
     if model_directory.is_dir():

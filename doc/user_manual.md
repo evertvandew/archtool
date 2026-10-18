@@ -80,7 +80,15 @@ elk = "elk"                        # The command that runs elk-cli
 [server]
 host = "127.0.0.1"                 # The address the collaboration server listens on
 port = 8080                        # The port it listens on
+
+[[exports]]                        # A file made from an element, offered as a download in the web client
+name = "Meta-model file"
+type = "metamodel"                 # The type of the elements it is made from
+command = ["{python}", "generate_metamodel.py", "{repository}", "--metamodel", "{element}"]
+file = "{label}.csv"
 ```
+
+An export's command runs in the repository's directory, and writes the file to stdout. `{element}`, `{label}`, `{repository}` and `{python}` are replaced by the element's identifier and label, the repository's path, and the Python that runs the tools. See [file_formats.md](file_formats.md#archtooltoml) for the details.
 
 ### Files
 
@@ -389,7 +397,7 @@ A meta model can be written by hand, following [file_formats.md](file_formats.md
 
 1. Start a repository with the metamodelling meta model: `archtool init examples/metamodelling/metamodel.csv my-metamodel`.
 2. Model your meta model, with its types, their attributes, labels and shapes, its diagram types and its rules, e.g. in the web client (`archtool serve my-metamodel`). One model can define several meta models, which can share types and rules. `archtool check` reports what is missing or wrong.
-3. Generate the meta-model file of one of them: `uv run python examples/metamodelling/generate_metamodel.py my-metamodel -m "My method" -o my-method.csv`. It is only written if the tools can read it.
+3. Generate the meta-model file of one of them: `uv run python examples/metamodelling/generate_metamodel.py my-metamodel -m "My method" -o my-method.csv`. It is only written if the tools can read it. With an export in `archtool.toml`, as in the example, the web client offers the file as a download on the meta model's page.
 4. Start a model with it: `archtool init my-method.csv my-model`.
 
 See the example's [README](../examples/metamodelling/README.md) for the details.

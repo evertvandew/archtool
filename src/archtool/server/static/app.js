@@ -317,7 +317,7 @@ function renderElement(content, id) {
   parts.push(attributeForm(id));
   if (isEntity(e.type)) parts.push(...hierarchySection(id), ...portsSection(id));
   if (isEntity(e.type) || hasStereotype(e.type, "Port")) parts.push(...relationshipsSection(id));
-  parts.push(...referencesSection(id), ...diagramsSection(id), ...viewsSection(id));
+  parts.push(...referencesSection(id), ...diagramsSection(id), ...exportsSection(id), ...viewsSection(id));
   content.replaceChildren(...parts);
   showDefaultView(id);
 }
@@ -543,6 +543,38 @@ function diagramsSection(id) {
   if (!diagrams.length) return [];
   return [el("h3", {}, "Appears in"), el("ul", {className: "links"}, diagrams.map((d) => el("li", {},
     el("a", {onclick: () => openDiagram(d.id, id)}, d.label), " ", el("span", {className: "muted"}, d.type))))];
+}
+
+// The files that the repository's settings can make from an element, e.g. a meta-model file from a meta model.
+function exportsSection(id) {
+  const exports = state.model.exports.map((e, number) => ({...e, number})).filter((e) => isA(element(id).type, e.type));
+  if (!exports.length) return [];
+  const status = el("p", {className: "muted", hidden: true});
+  const download = async (exported) => {
+    status.hidden = false;
+    status.className = "muted";
+    status.textContent = `Making ${exported.name}…`;
+    const response = await fetch(`/api/exports/${exported.number}/${encodeURIComponent(id)}`);
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({error: response.statusText}));
+      status.className = "notice";
+      status.textContent = body.error;
+      return;
+    }
+    // Save the file under the name the server gives it.
+    const disposition = response.headers.get("Content-Disposition") || "";
+    const match = /filename="([^"]*)"/.exec(disposition);
+    const url = URL.createObjectURL(await response.blob());
+    const anchor = el("a", {href: url, download: match ? match[1] : "export"});
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    status.hidden = true;
+  };
+  return [el("h3", {}, "Export"),
+          el("div", {className: "actions"}, exports.map((e) => el("button", {type: "button", onclick: () => download(e)}, e.name))),
+          status];
 }
 
 // The generated diagrams that can be made for an element without storing them: those of diagram types whose

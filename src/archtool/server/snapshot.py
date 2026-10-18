@@ -4,6 +4,8 @@ Values are converted to JSON as simply as possible: text, numbers and booleans a
 anything else (floats, which keep their text, template parameters and arguments) as the text of a table cell.
 """
 
+from collections.abc import Sequence
+
 from archtool.checker import Finding
 from archtool.formats.datatypes import DataType, EnumType, ListType, RefType, SimpleType
 from archtool.diagrams.content import diagram_content
@@ -13,6 +15,7 @@ from archtool.identifiers import identifier_key
 from archtool.language.runtime import RuleError, Rules, Runner
 from archtool.metamodel import MetaModel
 from archtool.model import Model
+from archtool.repository import Export
 
 type Json = dict[str, object]
 
@@ -20,7 +23,7 @@ _PROPERTIES = ("owner", "start", "end", "parent", "child", "aggregate", "constit
                "entities", "relationships", "chains", "rules")  # fmt: skip
 
 
-def snapshot(model: Model, rules: Rules, findings: list[Finding], version: int) -> Json:
+def snapshot(model: Model, rules: Rules, findings: list[Finding], version: int, exports: Sequence[Export] = ()) -> Json:
     runner = Runner(rules, model)
     metamodel = model.metamodel
     parents: dict[str, str] = {}
@@ -57,6 +60,8 @@ def snapshot(model: Model, rules: Rules, findings: list[Finding], version: int) 
         "elements": elements,
         "diagrams": diagrams,
         "findings": [finding.to_json() for finding in findings],
+        # The files that can be made from elements of a type, by number: /api/exports/<number>/<element>.
+        "exports": [{"name": e.name, "type": e.type} for e in exports],
     }
 
 

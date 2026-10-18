@@ -328,6 +328,7 @@ It is started with `archtool serve [repository]`, on the host and port of `archt
 | `POST /api/commands` | Executes `{"command": "…"}`, for clients without a WebSocket. |
 | `GET /api/diagrams/<id>.svg` | A rendered diagram. Diagrams are rendered at most once per version of the model. |
 | `GET /api/preview.svg?type=<diagram type>&rule=<rule>&<parameter>=<value>…` | A generated diagram that is not stored in the model, e.g. the breakdown of an element. |
+| `GET /api/exports/<n>/<id>` | Export `n` of the `exports` in `archtool.toml`, made from element `id` by its command, as a download. |
 | `POST /api/identifiers` | Allocates an identifier: `{"type": "function"}` → `{"id": "function_43"}`. |
 
 The web client is plain JavaScript, without a framework or build step. Every change it makes is a command of the editing engine, so it goes through the same validation as `archtool edit`. It has:
@@ -335,6 +336,7 @@ The web client is plain JavaScript, without a framework or build step. Every cha
 * a hierarchy view of the entities, with search, and forms to edit their attributes, add parts and ports, move them in the hierarchy, connect them with relationships, add new elements connected to them, and delete them. Every element with parts can be collapsed, and collapsed elements show how many parts they hide; what is collapsed is kept in the viewer's browser. Selecting an element, e.g. in a diagram, expands the tree to show it;
 * for a selected element: the diagrams it appears in, and generated views of it that are not stored in the model, such as its breakdown. A view can be made with any diagram type whose generation rule has exactly one required parameter, of the element's type; an element that is broken down shows its breakdown straight away;
 * the diagrams: rendered by the server, with elements selectable by clicking them; drawn diagrams can show and hide elements, and sequence diagrams can add chains. Double-clicking a block with parts opens its subsystem: a diagram of the same kind of its parts, which is a stored diagram generated for that block if there is one, and otherwise a generated view that is not stored. An "Up" button opens the subsystem of the parent. The link from a block to its subsystem is derived from the generation rules, not stored;
+* the exports of an element, the files that commands in `archtool.toml` make from it, such as a meta-model file from a meta model of the metamodelling example, as downloads;
 * the current findings, which link to the elements they concern;
 * a console to type commands, which also logs the results of all commands of the client.
 

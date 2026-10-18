@@ -7,7 +7,8 @@ One server serves one model. It holds the model in memory, with the editing engi
   and tells all clients that the model changed, so that they refresh;
 * renders diagrams as SVG (`/api/diagrams/<id>.svg`), and previews of generated diagrams that are not stored
   (`/api/preview.svg`);
-* allocates identifiers (`POST /api/identifiers`).
+* allocates identifiers (`POST /api/identifiers`);
+* makes the exports that archtool.toml declares, files made from an element by a command (`/api/exports/<n>/<id>`).
 
 When two users edit the same element at the same moment, the last write wins. See "Collaboration server" in
 doc/architecture.md.
@@ -15,6 +16,7 @@ doc/architecture.md.
 
 import asyncio
 import json
+import mimetypes
 from importlib import resources
 from pathlib import Path
 
@@ -22,6 +24,8 @@ from aiohttp import WSMsgType, web
 
 from archtool.diagrams.render import RenderError, Renderer
 from archtool.editing.editor import Editor
+from archtool.exports import Exported, ExportError, run_export
+from archtool.language.runtime import Runner
 from archtool.repository import Repository, save_repository
 from archtool.server.snapshot import snapshot
 
@@ -72,6 +76,14 @@ class Session:
             self._svg[key] = (self.version, svg)
             return svg
 
+    async def export(self, number: int, identifier: str) -> Exported:
+        """Make an export of an element. The model cannot change meanwhile, as the command reads its files."""
+        async with self.lock:
+            model = self.repository.model
+            label = Runner(self.editor.rules, model).default_label(identifier) if identifier in model else identifier
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(None, run_export, self.repository, number, identifier, label)
+
     async def svg(self, identifier: str) -> str:
         """The SVG of a diagram, rendered at most once per version of the model."""
         async with self.lock:
@@ -93,6 +105,7 @@ def create_app(session: Session) -> web.Application:
     app.router.add_get("/api/model", model)
     app.router.add_get("/api/diagrams/{identifier}.svg", diagram)
     app.router.add_get("/api/preview.svg", preview)
+    app.router.add_get("/api/exports/{number:[0-9]+}/{identifier}", export)
     app.router.add_post("/api/identifiers", identifier)
     app.router.add_post("/api/commands", command)
     app.router.add_get("/api/socket", socket)
@@ -116,7 +129,8 @@ async def static(request: web.Request) -> web.Response:
 async def model(request: web.Request) -> web.Response:
     session = request.app[_SESSION]
     async with session.lock:
-        data = snapshot(session.repository.model, session.editor.rules, session.editor.findings, session.version)
+        model = session.repository.model
+        data = snapshot(model, session.editor.rules, session.editor.findings, session.version, session.repository.settings.exports)
     return web.json_response(data)
 
 
@@ -140,6 +154,18 @@ async def preview(request: web.Request) -> web.Response:
     except RenderError as error:
         return web.json_response({"error": str(error)}, status=400)
     return web.Response(text=svg, content_type="image/svg+xml")
+
+
+async def export(request: web.Request) -> web.Response:
+    """A file made from an element by an export of archtool.toml, as a download."""
+    session = request.app[_SESSION]
+    try:
+        exported = await session.export(int(request.match_info["number"]), request.match_info["identifier"])
+    except ExportError as error:
+        return web.json_response({"error": str(error)}, status=error.status)
+    content_type = mimetypes.guess_type(exported.file)[0] or "application/octet-stream"
+    disposition = f'attachment; filename="{exported.file}"'
+    return web.Response(body=exported.content, content_type=content_type, headers={"Content-Disposition": disposition})
 
 
 async def identifier(request: web.Request) -> web.Response:

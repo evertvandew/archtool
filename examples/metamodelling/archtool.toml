@@ -1,2 +1,9 @@
 [model]
 metamodel = "metamodel.csv"
+
+# The meta-model file of a meta model, which the web client offers as a download on the meta model's page.
+[[exports]]
+name = "Meta-model file"
+type = "metamodel"
+command = ["{python}", "generate_metamodel.py", "{repository}", "--metamodel", "{element}"]
+file = "{label}.csv"
