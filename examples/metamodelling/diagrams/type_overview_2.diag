@@ -1,0 +1,3 @@
+@diagram type_overview_2 : type_overview
+generate type_overview(root=metamodel_2)
+@end

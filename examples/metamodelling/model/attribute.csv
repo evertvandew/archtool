@@ -1,7 +1,10 @@
-@last_number 5
+@last_number 8
 id:id;name:str;datatype:str;required:bool;default:str;description:text
 attribute_1;name;str;;;The name of the element.
 attribute_2;text;text;true;;The text of the requirement.
 attribute_3;priority;enum(high|medium|low);;medium;
 attribute_4;direction;enum(input|output);true;;Whether the flow leaves or enters the block.
 attribute_5;item;str;;;What flows: a signal, a material or energy.
+attribute_6;entry_action;str;;;What the system does when it enters the state.
+attribute_7;trigger;str;;;The event that causes the transition.
+attribute_8;guard;str;;;The condition under which the transition is taken.

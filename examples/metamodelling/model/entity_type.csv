@@ -1,4 +1,5 @@
-@last_number 2
+@last_number 3
 id:id;name:str;description:text
 entity_type_1;requirement;A requirement on the system.
 entity_type_2;block;A part of the system.
+entity_type_3;state;A state that the system can be in.

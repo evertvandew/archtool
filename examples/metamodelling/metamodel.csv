@@ -8,10 +8,14 @@
 #
 # The links between types are relationships, so that they can be drawn and
 # checked; attributes, labels and shapes are parts of the type they belong to.
+#
+# A model can define several meta models. Types, stereotypes, rules and
+# abstraction levels belong to one or more of them, so that meta models can
+# share them; the script generates the meta-model file of one meta model.
 
 @table entity_types
 name:ident;extends:ref(entity_types);description:text
-metamodel;;The meta model being defined: its name, description, stylesheet and SVG definitions. A model holds at most one.
+metamodel;;A meta model being defined: its name, description, stylesheet and SVG definitions. Types, stereotypes, rules and abstraction levels belong to it.
 classifier;;Something that attributes, labels and shapes can be defined for: a type, or a stereotype of the core model.
 stereotype;classifier;A stereotype of the core model, such as Entity or Relationship, named as in the core model. Attributes, labels and shapes defined for a stereotype apply to all types with that stereotype.
 model_type;classifier;A type of the meta model. Its name is used in identifiers and rules: lowercase letters, digits and underscores.
@@ -33,6 +37,7 @@ abstraction_level;;An abstraction level, which groups diagram types.
 
 @table relationship_types
 name:ident;extends:ref(relationship_types);start:list(ref(entity_types|port_types));end:list(ref(entity_types|port_types));description:text
+belongs_to;;[classifier,rule,abstraction_level];[metamodel];The meta models that a type, stereotype, rule or abstraction level is part of. Belonging to several meta models shares it between them.
 extends;;[model_type];[model_type];A type that extends another type of the same kind, and inherits its attributes.
 owned_by;;[port_type];[entity_type,template_type,instantiation_type];The types of entities that ports of a type can belong to.
 starts_at;;[relationship_type];[entity_type,port_type,template_type,instantiation_type];The types that relationships of a type can start at.
@@ -56,7 +61,7 @@ classifier_has_shape;classifier;type_shape;The shapes defined for a type or ster
 
 @table diagram_types
 name:ident;kind:enum(block|sequence|breakdown|use_case);entities:list(ref(entity_types|port_types));relationships:list(ref(any_type));chains:list(ref(chain_types));rules:list(ident);description:text
-type_overview;block;[model_type];[extends,owned_by,starts_at,ends_at,has_parent,has_child,has_aggregate,has_constituent,chain_of,instantiates];;[type_overview];The types of the meta model, and how they are related.
+type_overview;block;[model_type];[extends,owned_by,starts_at,ends_at,has_parent,has_child,has_aggregate,has_constituent,chain_of,instantiates];;[type_overview];The types of a meta model, and how they are related.
 type_details;breakdown;[classifier,attribute,type_label,type_shape];[classifier_has_attribute,classifier_has_label,classifier_has_shape];;[type_details];A type or stereotype, with its attributes, labels and shapes.
 diagram_contents;block;[model_type,rule];[shows,highlights,uses_rule];;[diagram_contents];What the diagrams of a type show, and the rules that generate them.
 
@@ -113,8 +118,8 @@ diagram_type:ref(diagram_types);type:ref(any_type);shape:str;start:str;end:str
 @rules
 # Generation rules
 
-diagram type_overview:
-    let types = model_type except diagram_type
+diagram type_overview(root: metamodel):
+    let types = (root.sources(belongs_to) intersect model_type) except diagram_type
     show types
     show extends between types
     show owned_by between types
@@ -142,10 +147,20 @@ diagram diagram_contents(root: diagram_type):
 
 # Verification rules: what the meta-model file needs, so that the errors are found while modelling.
 
-check single_metamodel (error):
-    for each m in metamodel:
-        require count(metamodel) = 1
-        otherwise "A model can only define one meta model, but {m} is one of {count(metamodel)}."
+check belongs_to_a_metamodel (error):
+    for each e in (classifier union rule union abstraction_level):
+        require e.targets(belongs_to) is not empty
+        otherwise "{e} must belong to a meta model."
+
+check links_within_metamodels (error):
+    for each r in Relationship except belongs_to:
+        require r.start.targets(belongs_to) in r.end.targets(belongs_to)
+        otherwise "{r.start} is linked to {r.end} by {r.type}, so {r.end} must belong to every meta model that {r.start} belongs to."
+
+check diagram_within_metamodels (error):
+    for each p in (type_label union type_shape) where in_diagram is not empty:
+        require p.parent.targets(belongs_to) in p.in_diagram.targets(belongs_to)
+        otherwise "{p} is used in diagram type {p.in_diagram}, so that must belong to every meta model that {p.parent} belongs to."
 
 check type_name (error):
     for each t in model_type:

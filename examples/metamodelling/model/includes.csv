@@ -1,5 +1,6 @@
-@last_number 3
+@last_number 4
 id:id;start:ref(abstraction_level);end:ref(diagram_type);name:str
 includes_1;abstraction_level_1;diagram_type_1;
 includes_2;abstraction_level_1;diagram_type_2;
 includes_3;abstraction_level_1;diagram_type_3;
+includes_4;abstraction_level_2;diagram_type_4;

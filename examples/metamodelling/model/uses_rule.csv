@@ -1,5 +1,6 @@
-@last_number 3
+@last_number 4
 id:id;start:ref(diagram_type);end:ref(rule);name:str
 uses_rule_1;diagram_type_1;rule_1;
 uses_rule_2;diagram_type_2;rule_2;
 uses_rule_3;diagram_type_3;rule_3;
+uses_rule_4;diagram_type_4;rule_5;

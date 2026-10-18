@@ -388,8 +388,8 @@ All features of the web client are listed in [gui_features.md](gui_features.md).
 A meta model can be written by hand, following [file_formats.md](file_formats.md#meta-model-file), or modelled with the tools themselves, with the example in [`examples/metamodelling`](../examples/metamodelling):
 
 1. Start a repository with the metamodelling meta model: `archtool init examples/metamodelling/metamodel.csv my-metamodel`.
-2. Model the types of your method, with their attributes, labels and shapes, its diagram types and its rules, e.g. in the web client (`archtool serve my-metamodel`). `archtool check` reports what is missing or wrong.
-3. Generate the meta-model file: `uv run python examples/metamodelling/generate_metamodel.py my-metamodel -o my-method.csv`. It is only written if the tools can read it.
+2. Model your meta model, with its types, their attributes, labels and shapes, its diagram types and its rules, e.g. in the web client (`archtool serve my-metamodel`). One model can define several meta models, which can share types and rules. `archtool check` reports what is missing or wrong.
+3. Generate the meta-model file of one of them: `uv run python examples/metamodelling/generate_metamodel.py my-metamodel -m "My method" -o my-method.csv`. It is only written if the tools can read it.
 4. Start a model with it: `archtool init my-method.csv my-model`.
 
 See the example's [README](../examples/metamodelling/README.md) for the details.

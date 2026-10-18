@@ -1,4 +1,5 @@
-@last_number 2
+@last_number 3
 id:id;start:ref(relationship_type);end:ref(entity_type|port_type|template_type|instantiation_type);name:str
 ends_at_1;relationship_type_1;port_type_1;
 ends_at_2;relationship_type_2;entity_type_1;
+ends_at_3;relationship_type_3;entity_type_3;

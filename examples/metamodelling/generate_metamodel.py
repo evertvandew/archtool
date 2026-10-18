@@ -1,9 +1,14 @@
 """Generate a meta-model file from a model made with the metamodelling meta model.
 
-    uv run python examples/metamodelling/generate_metamodel.py [repository] [-o metamodel.csv]
+    uv run python examples/metamodelling/generate_metamodel.py [repository] [-m metamodel] [-o metamodel.csv]
 
-The repository is the model that defines the meta model; it defaults to the directory of this script. The meta-model
-file is written to the output file, or to stdout. Start a model with it with `archtool init <metamodel.csv> <dir>`.
+The repository is the model that defines the meta model; it defaults to the directory of this script. A model can
+define several meta models: `-m` chooses one, by its identifier or its name, and can be left out if there is only one.
+The file contains the types, stereotypes, rules and abstraction levels that belong to that meta model, with the
+attributes, labels and shapes of those types and stereotypes.
+
+The meta-model file is written to the output file, or to stdout. Start a model with it with
+`archtool init <metamodel.csv> <dir>`.
 
 The meta-model file is only written if it is valid: it is read back, with its rules, as the tools would read it, and
 any errors are reported with the line of the generated file they are on. Run `archtool check` on the repository
@@ -56,22 +61,59 @@ class GenerationError(Exception):
         self.problems = problems
 
 
-class _Source:
-    """Reads the model: names, relationships, and the parts of types."""
+def find_metamodel(model: Model, selector: str | None) -> Element:
+    """The meta model chosen by its identifier or name, or the only one if `selector` is None. Raises GenerationError."""
+    metamodels = model.elements_of("metamodel")
+    described = ", ".join(f"{m.id} ({m.values.get('name', 'no name')})" for m in metamodels)
+    if selector is None:
+        if len(metamodels) == 1:
+            return metamodels[0]
+        if not metamodels:
+            raise GenerationError(["the model defines no meta model"])
+        raise GenerationError([f"the model defines several meta models, so choose one with --metamodel: {described}"])
+    found = [m for m in metamodels if selector in (m.id, m.values.get("name"))]
+    if len(found) != 1:
+        problem = "no meta model" if not found else "more than one meta model"
+        raise GenerationError([f"there is {problem} called '{selector}'; the meta models are: {described or 'none'}"])
+    return found[0]
 
-    def __init__(self, model: Model) -> None:
+
+class _Source:
+    """Reads the part of the model that belongs to one meta model: names, relationships, and the parts of types."""
+
+    def __init__(self, model: Model, metamodel: Element) -> None:
         self.model = model
+        self.metamodel = metamodel
         self.problems: list[str] = []
         self._targets: dict[tuple[str, str], list[str]] = {}
         for relationship in model.elements_of("Relationship"):
             start, end = relationship.values.get("start"), relationship.values.get("end")
             if isinstance(start, str) and isinstance(end, str):
                 self._targets.setdefault((relationship.type, start), []).append(end)
+        self.members = {start for (kind, start), ends in self._targets.items() if kind == "belongs_to" and metamodel.id in ends}
         self._parts: dict[str, list[str]] = {}
         for hierarchy in model.elements_of("HierarchyRelationship"):
             parent, child = hierarchy.values.get("parent"), hierarchy.values.get("child")
             if isinstance(parent, str) and isinstance(child, str):
                 self._parts.setdefault(child, []).append(parent)
+
+    def elements_of(self, type_name: str) -> list[Element]:
+        """The elements of a type that belong to the meta model."""
+        return [e for e in self.model.elements_of(type_name, include_subtypes=False) if e.id in self.members]
+
+    def parts_of(self, type_name: str) -> list[Element]:
+        """The attributes, labels or shapes of the types and stereotypes that belong to the meta model."""
+        return [e for e in self.model.elements_of(type_name) if any(p in self.members for p in self._parts.get(e.id, []))]
+
+    def member(self, element: Element, identifier: str, how: str) -> bool:
+        """Whether an element that `element` refers to belongs to the meta model; if not, that is a problem."""
+        if identifier in self.members:
+            return True
+        self.problems.append(
+            f"{element.id} refers to {identifier} ({how}), which does not belong to {self.metamodel.id}; "
+            f"let it belong to {self.metamodel.id} as well"
+        )
+        return False
 
     def name(self, identifier: str) -> str:
         name = self.model.get(identifier).values.get("name")
@@ -85,8 +127,10 @@ class _Source:
         return value if isinstance(value, str) and value else None
 
     def targets(self, element: Element, relationship: str) -> list[str]:
-        """The elements that relationships of a type lead to from an element, in the order they were made."""
-        return sorted(self._targets.get((relationship, element.id), []), key=identifier_key)
+        """The elements of the meta model that relationships of a type lead to from an element, in the order they were
+        made."""
+        targets = sorted(self._targets.get((relationship, element.id), []), key=identifier_key)
+        return [target for target in targets if self.member(element, target, relationship)]
 
     def names(self, element: Element, relationship: str) -> tuple[str, ...]:
         return tuple(self.name(target) for target in self.targets(element, relationship))
@@ -98,12 +142,9 @@ class _Source:
         return names[0] if names else None
 
     def owner(self, element: Element) -> str | None:
-        """The name of the type or stereotype that an attribute, label or shape is part of."""
-        parents = self._parts.get(element.id, [])
-        if not parents:
-            self.problems.append(f"{element.id} is not part of a type or stereotype")
-            return None
-        return self.name(parents[0])
+        """The name of the type or stereotype of the meta model that an attribute, label or shape is part of."""
+        parents = [parent for parent in self._parts.get(element.id, []) if parent in self.members]
+        return self.name(parents[0]) if parents else None
 
     def rule_name(self, identifier: str) -> str:
         text = self.text(self.model.get(identifier), "text") or ""
@@ -114,19 +155,19 @@ class _Source:
         return match.group(1)
 
 
-def generate_metamodel(model: Model, source_name: str) -> str:
-    """The text of the meta-model file that a model defines. Raises GenerationError."""
-    source = _Source(model)
+def generate_metamodel(model: Model, metamodel: Element, source_name: str) -> str:
+    """The text of the meta-model file of one of the meta models that a model defines. Raises GenerationError."""
+    source = _Source(model, metamodel)
     tables: dict[str, list[Row]] = {table: [] for table in TABLE_HEADERS}
     for element_type, table in TYPE_TABLES.items():
-        for element in model.elements_of(element_type, include_subtypes=False):
+        for element in source.elements_of(element_type):
             tables[table].append(_type_row(source, element))
-    for level in model.elements_of("abstraction_level"):
+    for level in source.elements_of("abstraction_level"):
         tables["abstraction_levels"].append({
             "name": source.name(level.id), "diagrams": source.names(level, "includes"),
             "description": source.text(level, "description"),
         })  # fmt: skip
-    for attribute in model.elements_of("attribute"):
+    for attribute in source.parts_of("attribute"):
         datatype_text = source.text(attribute, "datatype") or ""
         try:
             datatype = parse_datatype(datatype_text)
@@ -138,31 +179,30 @@ def generate_metamodel(model: Model, source_name: str) -> str:
             "required": attribute.values.get("required") is True, "default": source.text(attribute, "default"),
             "description": source.text(attribute, "description"),
         })  # fmt: skip
-    for label in model.elements_of("type_label"):
+    for label in source.parts_of("type_label"):
         tables["labels"].append({
             "diagram_type": _diagram_type(source, label), "type": source.owner(label), "text": source.text(label, "text"),
             "anchor": source.text(label, "anchor"),
         })  # fmt: skip
-    for shape in model.elements_of("type_shape"):
+    for shape in source.parts_of("type_shape"):
         tables["shapes"].append({
             "diagram_type": _diagram_type(source, shape), "type": source.owner(shape),
             "shape": source.text(shape, "block_shape"), "start": source.text(shape, "line_start"),
             "end": source.text(shape, "line_end"),
         })  # fmt: skip
-    rules = [source.text(rule, "text") or "" for rule in model.elements_of("rule")]
-    metamodels = model.elements_of("metamodel")
-    if len(metamodels) > 1:
-        source.problems.append(f"the model defines more than one meta model: {', '.join(m.id for m in metamodels)}")
+    rules = [source.text(rule, "text") or "" for rule in source.elements_of("rule")]
     if source.problems:
         raise GenerationError(source.problems)
 
-    metamodel = metamodels[0] if metamodels else None
-    title = (source.text(metamodel, "name") if metamodel else None) or "Meta model"
+    title = source.text(metamodel, "name") or "Meta model"
     lines = [f"# {title}", "#"]
-    description = source.text(metamodel, "description") if metamodel else None
+    description = source.text(metamodel, "description")
     if description:
         lines += [f"# {line}".rstrip() for line in description.splitlines()] + ["#"]
-    lines += [f"# Generated by generate_metamodel.py from {source_name}: change that model, not this file.", ""]
+    lines += [
+        f"# Generated by generate_metamodel.py from {metamodel.id} in {source_name}: change that model, not this file.",
+        "",
+    ]
     for table, rows in tables.items():
         if rows:
             columns = parse_header(TABLE_HEADERS[table], table, 1)
@@ -171,7 +211,7 @@ def generate_metamodel(model: Model, source_name: str) -> str:
     if rules:
         lines += ["@rules", *"\n\n".join(rule.strip("\n") for rule in rules).split("\n"), "@end", ""]
     for section in ("defs", "style"):
-        text = source.text(metamodel, section) if metamodel else None
+        text = source.text(metamodel, section)
         if text:
             lines += [f"@{section}", *text.strip("\n").split("\n"), "@end", ""]
     return "\n".join(lines)
@@ -207,7 +247,9 @@ def _type_row(source: _Source, element: Element) -> Row:
 
 def _diagram_type(source: _Source, element: Element) -> str | None:
     diagram_type = element.values.get("in_diagram")
-    return source.name(diagram_type) if isinstance(diagram_type, str) else None
+    if not isinstance(diagram_type, str) or not source.member(element, diagram_type, "in_diagram"):
+        return None
+    return source.name(diagram_type)
 
 
 def validate(text: str) -> list[str]:
@@ -228,11 +270,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Generate a meta-model file from a model made with the metamodelling meta model.")
     parser.add_argument("repository", nargs="?", type=Path, default=Path(__file__).parent,
                         help="the model that defines the meta model (default: the directory of this script)")  # fmt: skip
+    parser.add_argument("-m", "--metamodel", help="the meta model to generate, by identifier or name (default: the only one)")
     parser.add_argument("-o", "--output", type=Path, help="the meta-model file to write (default: stdout)")
     arguments = parser.parse_args(argv)
     try:
         repository = load_repository(arguments.repository)
-        text = generate_metamodel(repository.model, arguments.repository.resolve().name)
+        metamodel = find_metamodel(repository.model, arguments.metamodel)
+        text = generate_metamodel(repository.model, metamodel, arguments.repository.resolve().name)
     except FormatError as error:
         print(f"{error.path}:{error.line}:{error.column}: {error.message}", file=sys.stderr)
         return 1
