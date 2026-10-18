@@ -1,3 +1,18 @@
+# Copyright (C) 2026 Evert van de Waal
+#
+# This file is part of archtool, the architecting tool.
+#
+# archtool is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
+#
+# archtool is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
+#
+# You should have received a copy of the GNU General Public License along with archtool. If not, see
+# <https://www.gnu.org/licenses/>.
+
 """The TatSu grammar of the selection language.
 
 The grammar follows "Grammar" in doc/selection_language.md. Indentation-based blocks are turned into `{` and
@@ -21,6 +36,8 @@ archtool.language.parser recognises nodes by these types. Notes on TatSu:
   optional parts are always nodes, e.g. `params`, and variants such as `is empty` and `is not empty` are
   separate node types rather than an optional token.
 """
+
+import itertools
 
 GRAMMAR = r"""
 @@grammar :: Selection
@@ -113,10 +130,15 @@ number_token = /-?[0-9]+(?:\.[0-9]+)?/ ;
 
 
 def generate_parser() -> str:
-    """The source code of the parser generated from GRAMMAR."""
+    """The source code of the parser generated from GRAMMAR, with the licence header of this file after its first
+    line (`#!/usr/bin/env python3`)."""
     import tatsu
+    from pathlib import Path
 
-    return str(tatsu.to_python_sourcecode(GRAMMAR))
+    lines = Path(__file__).read_text(encoding="utf-8").split("\n")
+    header = "\n".join(line for line in itertools.takewhile(lambda line: line.startswith("#"), lines))
+    first, rest = str(tatsu.to_python_sourcecode(GRAMMAR)).split("\n", 1)
+    return f"{first}\n{header}\n{rest}"
 
 
 if __name__ == "__main__":

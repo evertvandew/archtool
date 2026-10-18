@@ -1,3 +1,18 @@
+# Copyright (C) 2026 Evert van de Waal
+#
+# This file is part of archtool, the architecting tool.
+#
+# archtool is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
+# License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
+#
+# archtool is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+# warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
+#
+# You should have received a copy of the GNU General Public License along with archtool. If not, see
+# <https://www.gnu.org/licenses/>.
+
 """The meta model: the types of a method, defined as instances of the core-model stereotypes.
 
 See "Meta-model file" in doc/file_formats.md, and "Core-model stereotypes" in doc/architecture.md.
