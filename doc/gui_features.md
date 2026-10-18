@@ -16,6 +16,7 @@ Every change the client makes is a command of the editing engine (see "Command i
 | Reconnecting | When the WebSocket closes, pending commands fail, the status says "disconnected — reconnecting…", and the client reconnects every 2 seconds. | I |
 | Live updates | When the server reports that the model changed (by this client or another one), the client fetches `/api/model` again and redraws the explorer, findings and content; a selection or view whose element was deleted is cleared. | I |
 | Shareable links | The URL hash holds the id of the selected element or diagram (e.g. `/#component_2`), or a generated view that is not stored as `#view:<diagram type>:<rule>:<element>`; opening such a link selects it once the model is loaded. | I |
+| Back and forward | Every view (an element, a diagram, or a generated view such as a subsystem) is an entry in the browser's history (`history.pushState`), so the browser's Back and Forward buttons, Alt+←/→ and the mouse's back button move between the views shown before, any number of steps, without reloading the page; selecting in a diagram, editing and expanding the tree are not entries, and a diagram's entry remembers the element selected in it; with unsaved edits in a form, Back asks whether to discard them, and stays on the form if not; an entry whose element was deleted says so, also after a reload. | I |
 
 ## Model explorer
 

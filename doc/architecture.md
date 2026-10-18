@@ -342,7 +342,7 @@ The web client is plain JavaScript, without a framework or build step. Every cha
 
 The columns of the page can be resized by dragging the lines between them; the widths, like what is collapsed in the tree, are kept in the viewer's browser.
 
-The view is kept in the URL (e.g. `/#component_2`), so links to elements and diagrams can be shared. The features of the web client are listed in [gui_features.md](gui_features.md).
+The view is kept in the URL (e.g. `/#component_2`), so links to elements and diagrams can be shared. Every view is an entry in the browser's history, so Back and Forward move between the views shown before, within the same page. The features of the web client are listed in [gui_features.md](gui_features.md).
 While a diagram is rendered, which runs elk-cli, other commands wait. If this becomes a bottleneck, the layout can be run outside the lock, or with a long-running elkjs process.
 
 ## Layout and rendering

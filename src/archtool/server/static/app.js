@@ -168,8 +168,8 @@ function select(id) {
   const e = element(id);
   if (e && isDiagramType(e.type)) state.view = {kind: "diagram", id};
   else state.view = {kind: "element", id};
-  // The view is kept in the URL, so that links to elements and diagrams can be shared.
-  if (location.hash !== `#${id}`) history.replaceState(null, "", `#${id}`);
+  // The view is kept in the URL, so that links to elements and diagrams can be shared, and in the history.
+  remember(id);
   if (e && isEntity(e.type)) reveal(id);
   renderSidebar();
   renderContent({});
@@ -314,7 +314,8 @@ function renderContent({keepForm}) {
     // Keep the unsaved edits, but tell the user that the model changed.
     if (!content.querySelector(".notice")) {
       content.prepend(el("p", {className: "notice"}, "The model was changed. Save your edits, or ",
-        el("a", {onclick: () => { state.dirty = false; renderContent({}); }, href: "#"}, "discard them"), "."));
+        el("a", {href: "#", onclick: (event) => { event.preventDefault(); state.dirty = false; renderContent({}); }},
+           "discard them"), "."));
     }
   } else {
     renderElement(content, state.view.id);
@@ -700,7 +701,7 @@ function openView(view) {
   state.view = view;
   state.selected = null;
   state.dirty = false;
-  if (location.hash !== `#${viewKey(view)}`) history.replaceState(null, "", `#${viewKey(view)}`);
+  remember(viewKey(view));
   renderSidebar();
   renderContent({});
 }
@@ -819,6 +820,7 @@ async function renderDiagram(content, diagram) {
 
 function selectInDiagram(diagram, id) {
   state.selected = id;
+  rememberSelection(id);
   for (const group of document.querySelectorAll(".diagram-view [data-id]")) {
     group.classList.toggle("selected", group.dataset.id === id);
   }
@@ -837,6 +839,86 @@ function selectInDiagram(diagram, id) {
   panel.replaceChildren(...actions);
   if (isEntity(element(id).type)) reveal(id);
   renderTree();
+}
+
+// --- Navigation history -----------------------------------------------------------------------------------
+
+// Every view (an element, a diagram or a generated view) is an entry in the browser's history, so that Back and
+// Forward move between views without reloading the page. An entry holds the view's key, as in the URL, the element
+// selected in a diagram, and its position in the history, which tells Back from Forward. Selecting in a diagram,
+// editing and expanding the tree are not entries: Back goes to the previous view.
+let restoring = false;    // Whether a view is being restored from the history, which must not add an entry.
+let ignoreNextPop = false;
+let shownIndex = 0;       // The position of the shown entry in the history.
+
+function remember(key) {
+  if (restoring || (history.state && history.state.key === key)) return;
+  shownIndex += 1;
+  history.pushState({key, selected: null, index: shownIndex}, "", `#${key}`);
+}
+
+function rememberSelection(id) {
+  if (history.state && history.state.key === currentKey() && history.state.selected !== id) {
+    history.replaceState({...history.state, selected: id}, "");
+  }
+}
+
+// Show the view of a history entry, without adding an entry. Returns false if its element no longer exists.
+function restore(entry) {
+  restoring = true;
+  try {
+    const view = parseViewKey(entry.key);
+    if (view) {
+      openView(view);
+    } else if (entry.key && element(entry.key)) {
+      select(entry.key);
+      if (entry.selected && entry.selected !== entry.key && element(entry.selected)) {
+        state.selected = entry.selected;
+        renderTree();
+      }
+    } else if (entry.key) {
+      return false;
+    } else {
+      state.view = null;
+      state.selected = null;
+      renderSidebar();
+      renderContent({});
+    }
+    return true;
+  } finally {
+    restoring = false;
+  }
+}
+
+window.addEventListener("popstate", (event) => {
+  if (ignoreNextPop) {
+    ignoreNextPop = false;
+    return;
+  }
+  // An entry without state comes from editing the URL by hand: it gets a position after the shown one.
+  let entry = event.state;
+  if (!entry || !Number.isInteger(entry.index)) {
+    entry = {key: decodeURIComponent(location.hash.slice(1)), selected: null, index: shownIndex + 1};
+    history.replaceState(entry, "");
+  }
+  if (state.dirty && !confirm("The form has unsaved edits. Discard them?")) {
+    // The browser has moved already, and this cannot be cancelled: move back to the form, and ignore that move.
+    if (entry.index !== shownIndex) {
+      ignoreNextPop = true;
+      history.go(shownIndex - entry.index);
+    }
+    return;
+  }
+  shownIndex = entry.index;
+  if (!restore(entry)) showMissing(entry.key);
+});
+
+function showMissing(key) {
+  state.view = null;
+  state.selected = null;
+  renderSidebar();
+  document.getElementById("content").replaceChildren(el("p", {className: "notice"},
+    `${key} no longer exists. Go back or forward to another page.`));
 }
 
 // --- Console -----------------------------------------------------------------------------------------------
@@ -1006,9 +1088,12 @@ document.getElementById("new-diagram").addEventListener("submit", async (event) 
 });
 
 refresh().then(() => {
-  const id = decodeURIComponent(location.hash.slice(1));
-  const view = parseViewKey(id);
-  if (view) openView(view);
-  else if (id && element(id)) select(id);
+  // After a reload, the history entries of this page are still there; the shown one keeps its position.
+  const key = decodeURIComponent(location.hash.slice(1));
+  const entry = history.state && history.state.key === key && Number.isInteger(history.state.index)
+    ? history.state : {key, selected: null, index: 0};
+  shownIndex = entry.index;
+  history.replaceState(entry, "");
+  if (!restore(entry)) showMissing(entry.key);
   connect();
 });
