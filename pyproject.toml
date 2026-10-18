@@ -3,6 +3,8 @@ name = "archtool"
 version = "0.1.0"
 description = "Tools to build, check and render architecture models stored as text"
 requires-python = ">=3.12"
+license = "GPL-3.0-or-later"
+license-files = ["COPYING"]
 dependencies = [
     "aiohttp>=3.14.4",
     "tatsu>=5.24.0",
