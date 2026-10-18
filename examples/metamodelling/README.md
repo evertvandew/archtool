@@ -54,7 +54,7 @@ They share the stereotypes `Entity`, `Relationship` and `HierarchyRelationship`,
    ```
 
    Or copy this example, and change its model.
-2. Add a `metamodel`, and the types, their attributes, labels and shapes, the rules and the diagram types, each linked to the meta model with `belongs_to`. `archtool check my-metamodel` reports what is still missing.
+2. Add a `metamodel`, and the types, their attributes, labels and shapes, the rules and the diagram types, each linked to the meta model with `belongs_to`. In the web client, the "Add new" field of a meta model adds a type, rule or abstraction level that belongs to it in one step, and "Add part" of a type adds its attributes, labels and shapes. `archtool check my-metamodel` reports what is still missing.
 3. Generate the meta-model file:
 
    ```

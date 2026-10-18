@@ -484,7 +484,43 @@ function relationshipsSection(id) {
         send(`connect ${typeSelect.value} start=${startSelect.value} end=${endSelect.value}${nameArgument(typeSelect.value, name.value)}`);
       }}, "Connect", typeSelect, startSelect, "to", endSelect, name, el("button", {type: "submit"}, "Connect")));
   }
+  parts.push(...addConnectedForm(id));
   return parts.length > 1 ? parts : [];
+}
+
+// Adding a new element that is connected to this one, in either direction: e.g. a type that belongs to this meta
+// model, or a test that covers this requirement. Only entities can be added this way, as ports need an owner.
+function addConnectedForm(id) {
+  const type = element(id).type;
+  const options = [];
+  for (const relationship of Object.keys(types()).filter((t) => hasStereotype(t, "Relationship"))) {
+    const starts = property(relationship, "start");
+    const ends = property(relationship, "end");
+    for (const [incoming, here, there] of [[true, ends, starts], [false, starts, ends]]) {
+      if (!isAny(type, here)) continue;
+      for (const newType of Object.keys(types()).filter((t) => isEntity(t) && isAny(t, there))) {
+        options.push({relationship, incoming, newType,
+                      text: incoming ? `${newType}, which ${relationship} this` : `${newType}, which this ${relationship}`});
+      }
+    }
+  }
+  if (!options.length) return [];
+  const choice = el("select", {"aria-label": "Element to add, and how it is connected"},
+                    options.map((o, index) => option(String(index), o.text)));
+  const name = el("input", {placeholder: "Name", "aria-label": "Name of the new element"});
+  const add = async (event) => {
+    event.preventDefault();
+    const chosen = options[Number(choice.value)];
+    const added = await send(`add ${chosen.newType}${nameArgument(chosen.newType, name.value)}`);
+    const created = added.ok && added.created.find((c) => c.startsWith(`${chosen.newType}_`));
+    if (!created) return;
+    const [start, end] = chosen.incoming ? [created, id] : [id, created];
+    const connected = await send(`connect ${chosen.relationship} start=${start} end=${end}`);
+    // The element is only kept if it could be connected; the console shows why it could not.
+    if (connected.ok) name.value = "";
+    else await send(`delete ${created}`);
+  };
+  return [el("form", {className: "actions", onsubmit: add}, "Add new", choice, name, el("button", {type: "submit"}, "Add"))];
 }
 
 function referencesSection(id) {
