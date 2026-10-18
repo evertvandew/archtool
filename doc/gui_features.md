@@ -77,6 +77,24 @@ Every change the client makes is a command of the editing engine (see "Command i
 | Finding details | Hovering over a finding shows its check, file and line. | I |
 | Go to finding | Clicking a finding selects the element it concerns. | I |
 
+## Metamodelling
+
+Defining meta models in the web client, with the meta model of [`examples/metamodelling`](../examples/metamodelling). These features come from that meta model together with the generic features above; the client has no code of its own for them.
+
+| Feature | Description | Status |
+|---|---|---|
+| Meta models in the explorer | The explorer groups the meta models, stereotypes and each kind of type (entity_type, port_type, …, diagram_type), rules and abstraction levels, with the attributes, labels and shapes of a type or stereotype as its parts, which can be collapsed (Hierarchy tree). | I |
+| New meta model | "Add element" with the type `metamodel` and a name adds a meta model. | I |
+| Add to a meta model | On a meta model, "Add new" with e.g. "entity_type, which belongs_to this", "rule, which belongs_to this" or "abstraction_level, which belongs_to this" and a name adds the element and links it to the meta model with `belongs_to` (Add connected element). | I |
+| Share with another meta model | On a type, stereotype, rule or abstraction level, Connect with `belongs_to` to another meta model shares it with that meta model (Connect). | I |
+| Attributes, labels and shapes | On a type or stereotype, "Add part" with `attribute`, `type_label` or `type_shape` and a name adds one (Hierarchy: add part); its form has a text field for the data type, a select for `required`, the label's anchor and its diagram type, and fields for the shape and line endings (Attribute form). | I |
+| Linking types | On a type, Connect offers the links that its kind allows: `extends` for all types, `owned_by` for port types, `starts_at` and `ends_at` for relationship types, `has_parent` and `has_child` for hierarchy types, `chain_of`, `instantiates`, and `shows`, `highlights` and `uses_rule` for diagram types (Connect); "Add new" also creates the linked type in one step, e.g. "entity_type, which this starts_at" on a relationship type. | I |
+| Rules, stylesheet and definitions | A rule's text, and a meta model's stylesheet and SVG definitions, are edited in text areas (Attribute form). | I |
+| Type overview | On a meta model, the generated view `type_overview` shows its types (other than diagram types) and the links between them, each line labelled with its kind (Generated views). | I |
+| Type details | A type or stereotype with attributes, labels or shapes shows them straight away in the breakdown `type_details` (Default breakdown). | I |
+| Diagram type contents | On a diagram type, the generated view `diagram_contents` shows the types its diagrams show, the chain types they highlight and their generation rules (Generated views). | I |
+| Metamodelling findings | The findings list shows the metamodelling rules' findings, such as a type without a valid name, an element that belongs to no meta model, a link that crosses meta models, or an entity type that nothing connects; clicking one selects the element (Findings list, Go to finding). | I |
+
 ## Command console
 
 | Feature | Description | Status |
