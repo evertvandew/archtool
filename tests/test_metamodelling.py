@@ -166,3 +166,29 @@ def test_links_stay_within_metamodels(script: ModuleType, example: Path) -> None
         "relationship_type_3 refers to entity_type_2 (starts_at), which does not belong to metamodel_2; "
         "let it belong to metamodel_2 as well\n"
     )
+
+
+def test_entity_types_are_related(example: Path) -> None:
+    commands = (
+        # Not connected by any relationship type.
+        'add entity_type name="event"\nconnect belongs_to start=entity_type_4 end=metamodel_2\n'
+        # Connected through the type it extends: satisfies starts at block.
+        'add entity_type name="sensor"\nconnect belongs_to start=entity_type_5 end=metamodel_1\n'
+        "connect extends start=entity_type_5 end=entity_type_2\n"
+        # Connected through its port type only.
+        'add entity_type name="pump"\nconnect belongs_to start=entity_type_6 end=metamodel_1\n'
+        'add port_type name="pipe_port"\nconnect belongs_to start=port_type_2 end=metamodel_1\n'
+        "connect owned_by start=port_type_2 end=entity_type_6\n"
+        'add relationship_type name="pipe"\nconnect belongs_to start=relationship_type_4 end=metamodel_1\n'
+        "connect starts_at start=relationship_type_4 end=port_type_2\nconnect ends_at start=relationship_type_4 end=port_type_2\n"
+    )
+    output = io.StringIO()
+    assert run_edit(example, io.StringIO(commands), output, io.StringIO()) == 0, output.getvalue()
+    findings = check_repository(load_repository(example))
+    assert [(f.severity.value, f.check, f.element, f.message) for f in findings] == [
+        (
+            "warning", "entity_type_related", "entity_type_4",
+            "Entity type event is not connected by any relationship type, directly, through its port types, "
+            "or through the types it extends.",
+        )
+    ]  # fmt: skip

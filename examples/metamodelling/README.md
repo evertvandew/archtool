@@ -33,7 +33,7 @@ Diagrams of a meta model:
 * `type_details`: a type or stereotype with its attributes, labels and shapes;
 * `diagram_contents`: what a diagram type shows, and the rules that generate its diagrams.
 
-Verification rules check what the meta-model file needs, such as names that can be used as type names, relationship types with a start and an end, and diagram types that only use generation rules. They also check that everything belongs to a meta model, and that links stay within meta models: if a relationship type of a meta model starts at a type, that type must belong to the same meta model.
+Verification rules check what the meta-model file needs, such as names that can be used as type names, relationship types with a start and an end, and diagram types that only use generation rules. A warning points out entity types that no relationship type connects, directly, through their port types, or through the types they extend. The rules also check that everything belongs to a meta model, and that links stay within meta models: if a relationship type of a meta model starts at a type, that type must belong to the same meta model.
 
 ## The example model
 
